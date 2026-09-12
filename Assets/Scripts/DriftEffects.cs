@@ -8,43 +8,66 @@ public class DriftEffects : MonoBehaviour
     [Header("Дым из-под колёс")]
     public ParticleSystem smokeRL, smokeRR;
 
-    [Header("Условия дыма")]
-    [Tooltip("Насколько сильным должен быть занос (0-1). Выше = только настоящий дрифт")]
+    [Header("Условия появления дыма")]
     public float slipThreshold = 0.75f;
-    [Tooltip("Минимальная скорость для дыма (м/с). Ниже = дыма нет")]
     public float minSpeed = 6f;
+    public float minSpeedHandbrake = 4f;
+
+    [Header("Густота")]
+    public float rateMin = 30f;   // эмиссия в лёгком заносе
+    public float rateMax = 80f;   // эмиссия в глубоком дрифте
 
     private Rigidbody rb;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        StopSmoke(smokeRL);
+        StopSmoke(smokeRR);
     }
 
     void Update()
     {
         float speed = rb.linearVelocity.magnitude;
+        bool handbrake = Input.GetKey(KeyCode.Space);
 
-        TryEmit(rearLeft, smokeRL, speed);
-        TryEmit(rearRight, smokeRR, speed);
+        UpdateSmoke(rearLeft, smokeRL, speed, handbrake);
+        UpdateSmoke(rearRight, smokeRR, speed, handbrake);
     }
 
-    void TryEmit(WheelCollider wheel, ParticleSystem smoke, float speed)
+    void UpdateSmoke(WheelCollider wheel, ParticleSystem smoke, float speed, bool handbrake)
     {
         if (smoke == null || wheel == null) return;
 
-        // Колесо в воздухе — дыма нет
         WheelHit hit;
-        if (!wheel.GetGroundHit(out hit)) return;
+        if (!wheel.GetGroundHit(out hit))
+        {
+            StopSmoke(smoke);
+            return;
+        }
 
         float slip = Mathf.Abs(hit.sidewaysSlip);
+        bool driftSmoke = slip > slipThreshold && speed > minSpeed;
+        bool handbrakeSmoke = handbrake && speed > minSpeedHandbrake;
 
-        // Дым ТОЛЬКО при настоящем заносе на скорости
-        if (slip > slipThreshold && speed > minSpeed)
+        if (driftSmoke || handbrakeSmoke)
         {
-            // Чем глубже занос — тем гуще дым, но без перебора
-            int count = Mathf.Clamp(Mathf.RoundToInt((slip - slipThreshold) * 4f), 1, 3);
-            smoke.Emit(count);
+            if (!smoke.isPlaying) smoke.Play();
+
+            // Чем глубже занос — тем гуще дым
+            var emission = smoke.emission;
+            emission.rateOverTimeMultiplier = Mathf.Lerp(rateMin, rateMax, Mathf.Clamp01(slip));
         }
+        else
+        {
+            StopSmoke(smoke);
+        }
+    }
+
+    void StopSmoke(ParticleSystem smoke)
+    {
+        if (smoke == null) return;
+        // Прекращаем рождение новых, но даём старым дожить и растаять
+        if (smoke.isPlaying) smoke.Stop(true, ParticleSystemStopBehavior.StopEmitting);
     }
 }
