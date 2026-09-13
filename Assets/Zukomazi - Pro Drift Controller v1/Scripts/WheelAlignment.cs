@@ -40,7 +40,7 @@ public class WheelAlignment : MonoBehaviour {
             wheelCol.steerAngle = steeringAngle;
         }
 
-        wheelGraphic.transform.eulerAngles = new Vector3(wheelBase.transform.eulerAngles.x, wheelBase.transform.eulerAngles.y + wheelCol.steerAngle, wheelBase.transform.eulerAngles.z);
+        wheelGraphic.transform.eulerAngles = new Vector3(wheelBase.transform.eulerAngles.x, wheelBase.transform.eulerAngles.y - wheelCol.steerAngle, wheelBase.transform.eulerAngles.z);
         wheelGraphic.transform.Rotate(wheelCol.rpm / 60 * 360 * Time.deltaTime, 0, 0);
     }
 }
