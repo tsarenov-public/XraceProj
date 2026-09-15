@@ -21,13 +21,11 @@ public class WheelSkid : MonoBehaviour {
 	WheelCollider wheelCollider;
 	WheelHit wheelHitInfo;
 
-	const float SKID_FX_SPEED = 1f; // Min side slip speed in m/s to start showing a skid
-	const float MAX_SKID_INTENSITY = 20.0f; // m/s where skid opacity is at full intensity
-	const float WHEEL_SLIP_MULTIPLIER = 7.0f; // For wheelspin. Adjust how much skids show
-	int lastSkid = -1; // Array index for the skidmarks controller. Index of last skidmark piece this wheel used
+	const float SKID_FX_SPEED = 1.2f;        // мин. боковое скольжение для следа
+	const float MAX_SKID_INTENSITY = 20.0f;  // скорость, при которой след максимальной черноты
+	const float WHEEL_SLIP_MULTIPLIER = 5.0f; // вклад пробуксовки в след
+	int lastSkid = -1;
 	float lastFixedUpdateTime;
-
-    // #### UNITY INTERNAL METHODS ####
 
     protected void Awake() {
 		wheelCollider = GetComponent<WheelCollider>();
@@ -41,49 +39,41 @@ public class WheelSkid : MonoBehaviour {
 	protected void LateUpdate() {
 		if (wheelCollider.GetGroundHit(out wheelHitInfo))
 		{
-			// Check sideways speed
-
-			// Gives velocity with +z being the car's forward axis
+			// Боковое скольжение
 			Vector3 localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
 			float skidTotal = Mathf.Abs(localVelocity.x);
 
-			// Check wheel spin as well
-
-			float wheelAngularVelocity = wheelCollider.radius * ((2 * Mathf.PI * wheelCollider.rpm) / 60);
+			// Пробуксовка — только при движении вперёд (задний ход остаётся чистым)
 			float carForwardVel = Vector3.Dot(rb.linearVelocity, transform.forward);
-			float wheelSpin = Mathf.Abs(carForwardVel - wheelAngularVelocity) * WHEEL_SLIP_MULTIPLIER;
+			float wheelSpin = 0f;
 
-			// NOTE: This extra line should not be needed and you can take it out if you have decent wheel physics
-			// The built-in Unity demo car is actually skidding its wheels the ENTIRE time you're accelerating,
-			// so this fades out the wheelspin-based skid as speed increases to make it look almost OK
-			wheelSpin = Mathf.Max(0, wheelSpin * (7 - Mathf.Abs(carForwardVel)));
+			if (carForwardVel > 0.5f)
+			{
+				float wheelAngularVelocity = wheelCollider.radius * ((2 * Mathf.PI * wheelCollider.rpm) / 60);
+				wheelSpin = Mathf.Abs(carForwardVel - wheelAngularVelocity) * WHEEL_SLIP_MULTIPLIER;
+				wheelSpin = Mathf.Max(0, wheelSpin * (6 - carForwardVel));
+			}
 
 			skidTotal += wheelSpin;
 
-			// Skid if we should
+			// Рисуем след и даём визг, если скольжение настоящее
 			if (skidTotal >= SKID_FX_SPEED) {
-
 				float intensity = Mathf.Clamp01(skidTotal / MAX_SKID_INTENSITY);
-				// Account for further movement since the last FixedUpdate
 				Vector3 skidPoint = wheelHitInfo.point + (rb.linearVelocity * (Time.time - lastFixedUpdateTime));
 				lastSkid = skidmarksController.AddSkidMark(skidPoint, wheelHitInfo.normal, intensity, lastSkid);
 
 				SkidSound.volume = intensity / SkidSoundMultiplyer;
 			}
-			else {
+			else
+			{
 				lastSkid = -1;
 				SkidSound.volume = 0f;
 			}
 		}
-		else {
+		else
+		{
 			lastSkid = -1;
 			SkidSound.volume = 0f;
 		}
 	}
-
-	// #### PUBLIC METHODS ####
-
-	// #### PROTECTED/PRIVATE METHODS ####
-
-
 }
