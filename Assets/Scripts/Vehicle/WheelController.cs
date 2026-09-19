@@ -50,9 +50,9 @@ public class WheelController : MonoBehaviour
     public float antiRollRear = 5000f;
 
     [Header("Защита от спина")]
-    [Tooltip("Максимальный угол заноса (градусов). Выше — сцепление возвращается")]
+    [Tooltip("Максимальный угол заноса выше — сцепление возвращается")]
     public float maxDriftAngle = 55f;
-    [Tooltip("Демпфер рыскания: сопротивляется вращению. Выше = стабильнее")]
+    [Tooltip("Демпфер рыскания сопротивляется вращению выше = стабильнее")]
     public float yawDamping = 1000f;
 
     [Header("Физика")]
@@ -61,8 +61,8 @@ public class WheelController : MonoBehaviour
     public float Horizontal { get; private set; }
     public float Vertical { get; private set; }
 
-    private float driftFactor; // 0..1, сглаженная "глубина" дрифта
-    private float spinRisk;    // 0..1, риск разворота на 180
+    private float driftFactor; 
+    private float spinRisk;    
 
     void FixedUpdate()
     {
@@ -70,14 +70,12 @@ public class WheelController : MonoBehaviour
         Vector3 vel = RB.linearVelocity;
         float speed = vel.magnitude;
 
-        // Риск спина: угол между вектором скорости и носом машины
         spinRisk = 0f;
         if (speed > 4f && !Input.GetKey(KeyCode.Space))
         {
             float driftAngle = Mathf.Abs(Vector3.SignedAngle(vel, transform.forward, Vector3.up));
             spinRisk = Mathf.Clamp01((driftAngle - maxDriftAngle) / 25f);
 
-            // Демпфер рыскания: гасим вращение вокруг своей оси
             RB.AddTorque(transform.up * (-RB.angularVelocity.y * yawDamping));
         }
 
@@ -94,7 +92,7 @@ public class WheelController : MonoBehaviour
         Vertical = Input.GetAxis("Vertical");
     }
 
-    // #### DRIFT ASSIST: плавный вход + самоподдержка ####
+    // плавный вход + самоподдержка 
     void UpdateDriftFactor(float speed)
     {
         bool handbrake = Input.GetKey(KeyCode.Space);
@@ -109,9 +107,9 @@ public class WheelController : MonoBehaviour
         }
         else
         {
-            // Самоподдержка: если уже скользим — держим занос
+            //если уже скользим — держим занос
             float sustain = Mathf.Clamp01((rearSlip - driftSustainSlip) / (0.6f - driftSustainSlip));
-            // Вход: сильно выкрутил руль на скорости — помогаем сорваться
+            // сильно выкрутил руль на скорости — помогаем сорваться
             float entry = (steerAbs > driftSteerThreshold && speed > driftMinSpeed) ? steerAbs : 0f;
             target = Mathf.Max(sustain, entry);
         }
@@ -139,7 +137,7 @@ public class WheelController : MonoBehaviour
         return n > 0 ? sum / n : 0f;
     }
 
-    // #### РУЛЬ: скоростезависимый ####
+    // РУЛЬ скоростезависимый 
     void UpdateSteering(float speed)
     {
         float speedFactor = Mathf.Clamp01(speed / steerFadeSpeed);
@@ -157,7 +155,7 @@ public class WheelController : MonoBehaviour
         }
     }
 
-    // #### МОТОР + ТОРМОЗ + ЗАДНИЙ ХОД ####
+    // МОТОР + ТОРМОЗ + ЗАДНИЙ ХОД 
     void UpdateMotorAndBrake(float speed)
     {
         float throttle = Mathf.Max(0f, Vertical);          // W
@@ -190,14 +188,14 @@ public class WheelController : MonoBehaviour
         RB.linearDamping = brake > 0.1f ? 0.3f : 0f;
     }
 
-    // #### СЦЕПЛЕНИЕ ЗАДНИХ: плавно падает в дрифте ####
+    // СЦЕПЛЕНИЕ ЗАДНИХ: плавно падает в дрифте 
     void UpdateRearGrip()
     {
         bool handbrake = Input.GetKey(KeyCode.Space);
         float rearStiff = Mathf.Lerp(1f, driftStiffness, driftFactor);
         if (handbrake) rearStiff = Mathf.Min(rearStiff, handbrakeStiffness);
 
-        // У запредельного угла возвращаем сцепление — машина "ловит" себя сама
+        // У запредельного угла возвращаем сцепление — машина ловит себя сама
         rearStiff = Mathf.Lerp(rearStiff, 1f, spinRisk);
 
         for (int i = 0; i < steerableWheels.Length; i++)
@@ -209,7 +207,7 @@ public class WheelController : MonoBehaviour
         }
     }
 
-    // #### АНТИ-КРЕНЫ: не даём кузову валиться и переворачиваться ####
+    // АНТИ-КРЕНЫ не даём кузову валиться и переворачиваться 
     void ApplyAntiRoll()
     {
         if (steerableWheels.Length < 4) return;
@@ -223,19 +221,19 @@ public class WheelController : MonoBehaviour
         bool gL = L.GetGroundHit(out hitL);
         bool gR = R.GetGroundHit(out hitR);
 
-        // В воздухе = подвеска полностью распущена (travel = 1)
+        // В воздухе = подвеска полностью распущена 
         float travelL = 1f, travelR = 1f;
         if (gL) travelL = 1f - SuspensionCompression01(L, hitL);
         if (gR) travelR = 1f - SuspensionCompression01(R, hitR);
 
         float diff = (travelL - travelR) * stiffness;
 
-        // Сила, противодействующая крену: поджатую сторону толкаем вверх, висящую — вниз
+        // Силапротиводействующая крену поджатую сторону толкаем вверх, висящую — вниз
         if (gL) RB.AddForceAtPosition(-transform.up * diff, L.transform.position);
         if (gR) RB.AddForceAtPosition(transform.up * diff, R.transform.position);
     }
 
-    // Насколько поджата подвеска (0 = распущена, 1 = полностью сжата)
+    // Насколько поджата подвеска 
     float SuspensionCompression01(WheelCollider wheel, WheelHit hit)
     {
         float d = Vector3.Dot(wheel.transform.position - hit.point, wheel.transform.up);

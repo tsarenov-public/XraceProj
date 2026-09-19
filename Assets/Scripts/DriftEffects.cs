@@ -54,7 +54,7 @@ public class DriftEffects : MonoBehaviour
         {
             if (!smoke.isPlaying) smoke.Play();
 
-            // Чем глубже занос — тем гуще дым
+            // чем глубже занос — тем гуще дым
             var emission = smoke.emission;
             emission.rateOverTimeMultiplier = Mathf.Lerp(rateMin, rateMax, Mathf.Clamp01(slip));
         }
@@ -67,7 +67,7 @@ public class DriftEffects : MonoBehaviour
     void StopSmoke(ParticleSystem smoke)
     {
         if (smoke == null) return;
-        // Прекращаем рождение новых, но даём старым дожить и растаять
+        // прекращаем рождение новы даём старым дожить и растаять
         if (smoke.isPlaying) smoke.Stop(true, ParticleSystemStopBehavior.StopEmitting);
     }
 }

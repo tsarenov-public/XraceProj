@@ -2,12 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// Example skid script. Put this on a WheelCollider.
-// Copyright 2017 Nition, BSD licence (see LICENCE file). http://nition.co
+
 [RequireComponent(typeof(WheelCollider))]
 public class WheelSkid : MonoBehaviour {
 
-	// INSPECTOR SETTINGS
 	public AudioSource SkidSound;
 	public float SkidSoundMultiplyer;
 
@@ -16,7 +14,6 @@ public class WheelSkid : MonoBehaviour {
 	[SerializeField]
 	Skidmarks skidmarksController;
 
-	// END INSPECTOR SETTINGS
 
 	WheelCollider wheelCollider;
 	WheelHit wheelHitInfo;
@@ -43,7 +40,7 @@ public class WheelSkid : MonoBehaviour {
 			Vector3 localVelocity = transform.InverseTransformDirection(rb.linearVelocity);
 			float skidTotal = Mathf.Abs(localVelocity.x);
 
-			// Пробуксовка — только при движении вперёд (задний ход остаётся чистым)
+			// Пробуксовка — только при движении вперёд 
 			float carForwardVel = Vector3.Dot(rb.linearVelocity, transform.forward);
 			float wheelSpin = 0f;
 

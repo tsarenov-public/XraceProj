@@ -25,7 +25,7 @@ public class RacingCamera : MonoBehaviour
     public float lookHeight = 1.5f;
     [Tooltip("Как далеко впереди машины точка взгляда")]
     public float lookDistance = 8f;
-    [Tooltip("0 = по вектору движения, 1 = по носу машины. Для дрифта 0.6-0.8")]
+    [Tooltip("0 = по вектору движения, 1 = по носу машины")]
     [Range(0f, 1f)] public float forwardLookBias = 0.7f;
     [Tooltip("Плавность поворота камеры")]
     public float rotationSmoothTime = 0.12f;
@@ -38,7 +38,7 @@ public class RacingCamera : MonoBehaviour
     public float driftRollMax = 4f;
 
     [Header("Препятствия")]
-    [Tooltip("Слои препятствий (стены трассы). НЕ ставь Everything — иначе камера цепляет саму машину!")]
+    [Tooltip("Слои препятствий (стены трассы)")]
     public LayerMask blockingLayers = 0;
     public float collisionRadius = 0.3f;
 
@@ -55,7 +55,6 @@ public class RacingCamera : MonoBehaviour
 
         currentFov = cam.fieldOfView;
 
-        // Сразу ставим камеру позади машины, не ждём первый кадр
         if (target != null)
         {
             smoothPosition = target.position - target.forward * distanceStand + Vector3.up * heightStand;
@@ -67,7 +66,7 @@ public class RacingCamera : MonoBehaviour
     {
         if (target == null) return;
 
-        // ---------- 1. Скорость и направление ----------
+        // 1 Скорость и направление
         float speed = 0f;
         Vector3 velocityDir = target.forward;
         localVelX = 0f;
@@ -80,7 +79,6 @@ public class RacingCamera : MonoBehaviour
             Vector3 localVel = target.InverseTransformDirection(vel);
             localVelX = localVel.x;
 
-            // Задний ход: камеру держим позади, не перебрасываем вперёд
             if (localVel.z < -1f)
             {
                 velocityDir = target.forward;
@@ -91,24 +89,24 @@ public class RacingCamera : MonoBehaviour
             }
         }
 
-        // ---------- 2. Динамические дистанция и высота ----------
+        // 2 Динамические дистанция и высота 
         float t = Mathf.Clamp01(speed / maxDistanceSpeed);
         float targetDistance = Mathf.Lerp(distanceStand, distanceDrive, t);
         float targetHeight = Mathf.Lerp(heightStand, heightDrive, t);
 
-        // ---------- 3. Желаемая позиция позади машины ----------
+        // 3 Желаемая позиция позади машины 
         Vector3 desiredPos = target.position - velocityDir * targetDistance + Vector3.up * targetHeight;
 
-        // ---------- 4. Плавное следование ----------
+        // 4 Плавное следование 
         smoothPosition = Vector3.SmoothDamp(smoothPosition, desiredPos, ref smoothVelocity, positionSmoothTime);
 
-        // Страховка: если камера вдруг оказалась внутри/вплотную — выталкиваем
+        // если камера вдруг оказалась внутри— выталкиваем
         if (Vector3.Distance(smoothPosition, target.position) < 2f)
         {
             smoothPosition = target.position - target.forward * distanceStand + Vector3.up * heightStand;
         }
 
-        // ---------- 5. Препятствия: луч ОТ машины К камере ----------
+        // 5 Препятствия луч от машины к камере 
         if (blockingLayers != 0)
         {
             Vector3 from = target.position + Vector3.up * lookHeight;
@@ -127,7 +125,7 @@ public class RacingCamera : MonoBehaviour
 
         transform.position = smoothPosition;
 
-        // ---------- 6. Взгляд: смесь вектора движения и носа машины ----------
+        // 6 Взгляд смесь вектора движения и носа машины 
         Vector3 lookDir = Vector3.Lerp(velocityDir, target.forward, forwardLookBias).normalized;
         Vector3 lookAtPoint = target.position + Vector3.up * lookHeight + lookDir * lookDistance;
 
@@ -140,11 +138,11 @@ public class RacingCamera : MonoBehaviour
             targetRotation *= Quaternion.Euler(0f, 0f, roll);
         }
 
-        // Плавный поворот (экспоненциальное сглаживание, не зависит от FPS)
+        // Плавный поворот 
         float rotT = 1f - Mathf.Exp(-Time.deltaTime / rotationSmoothTime);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotT);
 
-        // ---------- 7. Динамический FOV ----------
+        // 7 Динамический FOV 
         float targetFov = Mathf.Lerp(minFov, maxFov, t);
         float fovT = 1f - Mathf.Exp(-Time.deltaTime / fovSmoothTime);
         currentFov = Mathf.Lerp(currentFov, targetFov, fovT);

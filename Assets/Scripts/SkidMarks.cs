@@ -25,7 +25,7 @@ public class SkidMarks : MonoBehaviour
     trailRL.emitting = false;
     trailRR.emitting = false;
 
-    // Удаляем "точку спавна", чтобы следы не висели в воздухе
+    // Удаляем точку спавна чтобы следы не висели в воздухе
     trailRL.Clear();
     trailRR.Clear();
     }
@@ -41,7 +41,7 @@ public class SkidMarks : MonoBehaviour
     {
         if (trail == null || wheel == null) return;
 
-        // Колесо в воздухе — след не рисуется
+        // Колесо в воздухе след не рисуется
         WheelHit hit;
         if (!wheel.GetGroundHit(out hit))
         {
@@ -54,7 +54,7 @@ public class SkidMarks : MonoBehaviour
 
         trail.emitting = skidding;
 
-        // Чем сильнее занос — тем шире и злее след
+        // Чем сильнее занос тем шире и злее след
         if (skidding)
         {
             trail.widthMultiplier = Mathf.Lerp(minWidth, maxWidth, Mathf.Clamp01(slip));
