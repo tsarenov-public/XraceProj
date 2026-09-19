@@ -149,9 +149,9 @@ public class WheelController : MonoBehaviour
             w.steeringAngle = Mathf.LerpAngle(w.steeringAngle, 0, Time.fixedDeltaTime * wheelRotateSpeed);
 
             if (Horizontal > 0.1f)
-                w.steeringAngle = Mathf.LerpAngle(w.steeringAngle, -maxSteer, Time.fixedDeltaTime * wheelRotateSpeed);
-            if (Horizontal < -0.1f)
                 w.steeringAngle = Mathf.LerpAngle(w.steeringAngle, maxSteer, Time.fixedDeltaTime * wheelRotateSpeed);
+            if (Horizontal < -0.1f)
+                w.steeringAngle = Mathf.LerpAngle(w.steeringAngle, -maxSteer, Time.fixedDeltaTime * wheelRotateSpeed);
         }
     }
 

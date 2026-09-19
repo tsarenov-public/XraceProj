@@ -1,42 +1,42 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class WheelAlignment : MonoBehaviour {
+public class WheelAlignment : MonoBehaviour
+{
+    [Header("Ссылки")]
+    public GameObject wheelGraphic;  // меш колеса
+    public WheelCollider wheelCol;   // физика колеса
 
-    public GameObject wheelBase;
-    public GameObject wheelGraphic;
-
-    public WheelCollider wheelCol;
-
+    [Header("Руление")]
     public bool steerable;
+    public float steeringAngle;      // сюда пишет WheelController
 
-    public float steeringAngle;
+    [Header("Визуальная правка")]
+    [Tooltip("Постоянный доворот поверх, если нужно")]
+    public Vector3 baseRotation;
 
-    RaycastHit hit;
-	
-	void Update ()
+    Quaternion rest; // родная поза меша 
+    float spin;      // накопленный угол вращения, градусы
+
+    void Start()
     {
-        alignMeshToCollider();
-	}
+        if (wheelGraphic != null)
+            rest = wheelGraphic.transform.localRotation;
+    }
 
-    void alignMeshToCollider()
+    void LateUpdate()
     {
-        if (Physics.Raycast(wheelCol.transform.position, -wheelCol.transform.up, out hit, wheelCol.suspensionDistance + wheelCol.radius))
-        {
-            wheelGraphic.transform.position = hit.point + wheelCol.transform.up *  wheelCol.radius;
-        }
-        else
-        {
-            wheelGraphic.transform.position = wheelCol.transform.position - (wheelCol.transform.up * wheelCol.suspensionDistance);
-        }
+        if (wheelGraphic == null || wheelCol == null) return;
 
         if (steerable)
-        {
             wheelCol.steerAngle = steeringAngle;
-        }
 
-        wheelGraphic.transform.eulerAngles = new Vector3(wheelBase.transform.eulerAngles.x, wheelBase.transform.eulerAngles.y - wheelCol.steerAngle, wheelBase.transform.eulerAngles.z);
-        wheelGraphic.transform.Rotate(wheelCol.rpm / 60 * 360 * Time.deltaTime, 0, 0);
+        // Вращение накапливаем: rpm - градусы за кадр
+        spin += wheelCol.rpm / 60f * 360f * Time.deltaTime;
+
+        // руль (Y) - родная поза - вращение вокруг своей оси (X)
+        wheelGraphic.transform.localRotation =
+            Quaternion.Euler(baseRotation.x, baseRotation.y + wheelCol.steerAngle, baseRotation.z)
+            * rest
+            * Quaternion.Euler(spin, 0f, 0f);
     }
 }

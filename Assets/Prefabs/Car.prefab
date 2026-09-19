@@ -32506,7 +32506,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6819182002990901183}
   - component: {fileID: 8852685126421154004}
-  - component: {fileID: 5048619901163402735}
   - component: {fileID: 344408549264612516}
   - component: {fileID: 8122812695453099113}
   - component: {fileID: 1248091986648830206}
@@ -32563,29 +32562,6 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &5048619901163402735
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8677917239380521764}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cbe61afa3930340c5a906b7a46e78b79, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CarController
-  frontLeft: {fileID: 6554365281567938127}
-  frontRight: {fileID: 5828899023072566254}
-  rearLeft: {fileID: 8854738258050449614}
-  rearRight: {fileID: 1727189913052296789}
-  frontLeftMesh: {fileID: 4892641686309889022}
-  frontRightMesh: {fileID: 6181757610791997988}
-  rearLeftMesh: {fileID: 1675603232582519860}
-  rearRightMesh: {fileID: 8891777148538933674}
-  motorForce: 1200
-  steerAngle: 30
-  driftFactor: 0.5
 --- !u!114 &344408549264612516
 MonoBehaviour:
   m_ObjectHideFlags: 0

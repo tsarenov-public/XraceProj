@@ -899,7 +899,6 @@ GameObject:
   m_Component:
   - component: {fileID: 304337672}
   - component: {fileID: 304337673}
-  - component: {fileID: 304337674}
   - component: {fileID: 304337675}
   - component: {fileID: 304337677}
   - component: {fileID: 304337679}
@@ -956,29 +955,6 @@ Rigidbody:
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &304337674
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 304337668}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: cbe61afa3930340c5a906b7a46e78b79, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CarController
-  frontLeft: {fileID: 159112643}
-  frontRight: {fileID: 88905121}
-  rearLeft: {fileID: 1746388719}
-  rearRight: {fileID: 494246851}
-  frontLeftMesh: {fileID: 1915490491}
-  frontRightMesh: {fileID: 1212634843}
-  rearLeftMesh: {fileID: 1700132702}
-  rearRightMesh: {fileID: 1096993650}
-  motorForce: 1200
-  steerAngle: 30
-  driftFactor: 0.5
 --- !u!114 &304337675
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1959,16 +1935,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!4 &1096993650 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 6445928065212430538, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
-  m_PrefabInstance: {fileID: 1346335575}
-  m_PrefabAsset: {fileID: 0}
---- !u!4 &1212634843 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 8611772789220556171, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
-  m_PrefabInstance: {fileID: 1346335575}
-  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1240584035 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4401534690552110, guid: e2c4a8323f8addc4696c51e0372cf7c7, type: 3}
@@ -2038,6 +2004,10 @@ PrefabInstance:
     - target: {fileID: 5414108620589773563, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8409818048062049584, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
+      propertyPath: m_Mesh
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 9041432283490599144, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
       propertyPath: m_Name
@@ -2269,11 +2239,6 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3094057854316653182, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
   m_PrefabInstance: {fileID: 1346335575}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &1700132702 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 8733763007255564756, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
-  m_PrefabInstance: {fileID: 1346335575}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1746388717
 GameObject:
   m_ObjectHideFlags: 0
@@ -2381,11 +2346,6 @@ MonoBehaviour:
   SkidSoundMultiplyer: 1
   rb: {fileID: 304337673}
   skidmarksController: {fileID: 749994784}
---- !u!4 &1915490491 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 5829152280296705108, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
-  m_PrefabInstance: {fileID: 1346335575}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1925940796
 GameObject:
   m_ObjectHideFlags: 0
