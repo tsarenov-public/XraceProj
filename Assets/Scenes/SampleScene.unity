@@ -333,11 +333,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab8821d774d01440be4afe24c442adc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WheelAlignment
-  wheelBase: {fileID: 304337668}
   wheelGraphic: {fileID: 614019703}
   wheelCol: {fileID: 88905121}
   steerable: 1
   steeringAngle: 0
+  baseRotation: {x: 0, y: 0, z: 0}
 --- !u!114 &88905123
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -382,7 +382,7 @@ Transform:
   m_GameObject: {fileID: 159112641}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.7838616, y: 0.52, z: 1.559718}
+  m_LocalPosition: {x: -0.78386164, y: 0.52, z: 1.5597179}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -439,11 +439,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab8821d774d01440be4afe24c442adc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WheelAlignment
-  wheelBase: {fileID: 304337668}
-  wheelGraphic: {fileID: 680617870}
+  wheelGraphic: {fileID: 1939782096}
   wheelCol: {fileID: 159112643}
   steerable: 1
   steeringAngle: 0
+  baseRotation: {x: 0, y: 0, z: 0}
 --- !u!114 &159112645
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1267,11 +1267,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab8821d774d01440be4afe24c442adc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WheelAlignment
-  wheelBase: {fileID: 304337668}
   wheelGraphic: {fileID: 608960328}
   wheelCol: {fileID: 494246851}
   steerable: 0
   steeringAngle: 0
+  baseRotation: {x: 0, y: 0, z: 0}
 --- !u!114 &494246853
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1463,11 +1463,6 @@ Transform:
   - {fileID: 1577001303}
   m_Father: {fileID: 304337672}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &680617870 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 1302646427899966117, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
-  m_PrefabInstance: {fileID: 1346335575}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &712315225
 GameObject:
   m_ObjectHideFlags: 0
@@ -2008,7 +2003,7 @@ PrefabInstance:
     - target: {fileID: 8409818048062049584, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
       propertyPath: m_Mesh
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 2764142403974883154, guid: 4e8a28938e1002c4cb222e32844ab845, type: 3}
     - target: {fileID: 9041432283490599144, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
       propertyPath: m_Name
       value: RMCar26
@@ -2325,11 +2320,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bab8821d774d01440be4afe24c442adc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WheelAlignment
-  wheelBase: {fileID: 304337668}
   wheelGraphic: {fileID: 1632010651}
   wheelCol: {fileID: 1746388719}
   steerable: 0
   steeringAngle: 0
+  baseRotation: {x: 0, y: 0, z: 0}
 --- !u!114 &1746388721
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2458,6 +2453,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1939782096 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3094057853774731301, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
+  m_PrefabInstance: {fileID: 1346335575}
+  m_PrefabAsset: {fileID: 0}
 --- !u!198 &1958801493 stripped
 ParticleSystem:
   m_CorrespondingSourceObject: {fileID: 198987657094923722, guid: e2c4a8323f8addc4696c51e0372cf7c7, type: 3}
