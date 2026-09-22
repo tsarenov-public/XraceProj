@@ -354,6 +354,8 @@ MonoBehaviour:
   SkidSoundMultiplyer: 1
   rb: {fileID: 304337673}
   skidmarksController: {fileID: 749994784}
+  skidSlipThreshold: 0.28
+  fullSkidSlip: 1.15
 --- !u!1 &159112641
 GameObject:
   m_ObjectHideFlags: 0
@@ -460,6 +462,8 @@ MonoBehaviour:
   SkidSoundMultiplyer: 1
   rb: {fileID: 304337673}
   skidmarksController: {fileID: 749994784}
+  skidSlipThreshold: 0.28
+  fullSkidSlip: 1.15
 --- !u!1 &170382235
 GameObject:
   m_ObjectHideFlags: 0
@@ -939,7 +943,7 @@ Rigidbody:
   m_Mass: 1500
   m_LinearDamping: 0
   m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0.5, z: 0}
+  m_CenterOfMass: {x: 0, y: 0.28, z: 0.08}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
   m_IncludeLayers:
@@ -969,13 +973,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DriftEffects
   rearLeft: {fileID: 1746388719}
   rearRight: {fileID: 494246851}
+  controller: {fileID: 304337677}
   smokeRL: {fileID: 1958801493}
   smokeRR: {fileID: 1240584037}
-  slipThreshold: 0.45
-  minSpeed: 3
-  minSpeedHandbrake: 4
-  rateMin: 60
-  rateMax: 140
+  slipThreshold: 0.32
+  minSpeedKph: 18
+  rateMin: 30
+  rateMax: 110
 --- !u!114 &304337677
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -993,28 +997,57 @@ MonoBehaviour:
   - {fileID: 88905122}
   - {fileID: 1746388720}
   - {fileID: 494246852}
-  wheelRotateSpeed: 15
-  wheelSteeringAngle: 32
-  steerFadeSpeed: 45
-  minSteerFactor: 0.3
-  wheelAcceleration: 24
-  wheelMaxSpeed: 1000
-  brakeTorque: 1300
-  reverseKey: 304
-  reverseTorque: 600
-  reverseMaxSpeed: 10
-  handbrakeStiffness: 0.25
-  handbrakeForce: 1100
-  driftStiffness: 0.48
-  driftEngageSpeed: 5
-  driftReleaseSpeed: 1.3
-  driftSustainSlip: 0.15
-  driftSteerThreshold: 0.4
-  driftMinSpeed: 4
-  antiRollFront: 6000
-  antiRollRear: 6000
-  maxDriftAngle: 70
-  yawDamping: 1200
+  handbrakeKey: 32
+  shiftDownKey: 113
+  shiftUpKey: 101
+  steeringInputSpeed: 5.5
+  steeringReturnSpeed: 7.5
+  lowSpeedSteerAngle: 38
+  highSpeedSteerAngle: 11
+  fullSteerFadeSpeedKph: 150
+  counterSteerAssist: 0.72
+  counterSteerStartAngle: 4
+  counterSteerMaxAngle: 28
+  wheelbase: 3.07
+  trackWidth: 1.57
+  peakEngineTorque: 460
+  peakTorqueRpm: 5200
+  idleRpm: 900
+  redlineRpm: 7800
+  engineRpmResponse: 9
+  engineBrakingTorque: 90
+  drivetrainEfficiency: 0.88
+  forwardGearRatios:
+  - 3.2
+  - 2.12
+  - 1.55
+  - 1.25
+  - 1.03
+  - 0.86
+  reverseGearRatio: 3.1
+  finalDriveRatio: 3.9
+  shiftDuration: 0.22
+  currentGear: 1
+  frontBrakeTorque: 2800
+  rearBrakeTorque: 1900
+  handbrakeTorque: 4200
+  absSlipLimit: 0.95
+  frontSidewaysStiffness: 1.35
+  rearSidewaysStiffness: 1.16
+  powerSlideRearStiffness: 0.78
+  handbrakeRearStiffness: 0.36
+  gripChangeSpeed: 5
+  driftMinSpeedKph: 22
+  driftSustainSlip: 0.22
+  driftYawAssist: 650
+  spinRecoveryStartAngle: 52
+  spinRecoveryFullAngle: 78
+  spinRecoveryTorque: 2100
+  antiRollFront: 7200
+  antiRollRear: 6100
+  aerodynamicDownforce: 8
+  aerodynamicDrag: 0.42
+  centerOfMassHeightOffset: -0.24
   RB: {fileID: 304337673}
 --- !u!114 &304337678
 MonoBehaviour:
@@ -1029,14 +1062,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CarAudio
   Engine: {fileID: 1577001304}
-  Speed: {fileID: 304337679}
   GearChangeSound: {fileID: 628017710}
-  PitchOffSet1: 0.02
-  PitchOffSet2: 0.015
-  PitchOffSet3: 0.01
-  PitchOffSet4: 0.008
-  PitchOffSet5: 0.007
-  PitchOffSet6: 0.006
+  Controller: {fileID: 304337677}
+  idlePitch: 0.75
+  redlinePitch: 2.05
+  idleVolume: 0.16
+  throttleVolume: 0.82
+  audioResponse: 7
 --- !u!114 &304337679
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1051,6 +1083,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SpeedCalculator
   Speed: 0
   rb: {fileID: 304337673}
+  controller: {fileID: 304337677}
   SpeedText: {fileID: 0}
   GearText: {fileID: 0}
   RPMText: {fileID: 0}
@@ -1288,6 +1321,8 @@ MonoBehaviour:
   SkidSoundMultiplyer: 1
   rb: {fileID: 304337673}
   skidmarksController: {fileID: 749994784}
+  skidSlipThreshold: 0.28
+  fullSkidSlip: 1.15
 --- !u!1 &608960328 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3094057854159107193, guid: 834b316c2b5f2e146ae22f9c7e385366, type: 3}
@@ -2341,6 +2376,8 @@ MonoBehaviour:
   SkidSoundMultiplyer: 1
   rb: {fileID: 304337673}
   skidmarksController: {fileID: 749994784}
+  skidSlipThreshold: 0.28
+  fullSkidSlip: 1.15
 --- !u!1 &1925940796
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,136 +1,43 @@
-﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class CarAudio : MonoBehaviour
 {
     public AudioSource Engine;
-    public SpeedCalculator Speed;
-
     public AudioSource GearChangeSound;
+    public WheelController Controller;
 
+    [Header("Звук двигателя")]
+    public float idlePitch = 0.75f;
+    public float redlinePitch = 2.05f;
+    public float idleVolume = 0.16f;
+    public float throttleVolume = 0.82f;
+    public float audioResponse = 7f;
 
-    public float PitchOffSet1;
-    public float PitchOffSet2;
-    public float PitchOffSet3;
-    public float PitchOffSet4;
-    public float PitchOffSet5;
-    public float PitchOffSet6;
+    private int lastGear;
 
-    void Start()
+    private void Awake()
     {
-
+        if (Controller == null) Controller = GetComponent<WheelController>();
+        lastGear = Controller == null ? 0 : Controller.CurrentGear;
     }
 
-    void Update()
+    private void Update()
     {
-        PitchControl();
-        GearChange();
-        EngineVolume();
-    }
+        if (Controller == null || Engine == null) return;
 
+        float rpmRange = Mathf.Max(1f, Controller.redlineRpm - Controller.idleRpm);
+        float normalizedRpm = Mathf.Clamp01((Controller.EngineRpm - Controller.idleRpm) / rpmRange);
+        float targetPitch = Mathf.Lerp(idlePitch, redlinePitch, normalizedRpm);
+        float targetVolume = Mathf.Lerp(idleVolume, throttleVolume, Controller.ThrottleInput);
+        float blend = 1f - Mathf.Exp(-audioResponse * Time.deltaTime);
 
-    public void EngineVolume()
-    {
+        Engine.pitch = Mathf.Lerp(Engine.pitch, targetPitch, blend);
+        Engine.volume = Mathf.Lerp(Engine.volume, targetVolume, blend);
 
-            if (Input.GetAxis("Vertical") == 1)
-            {
-                Engine.volume += Time.deltaTime;
-            }
-            else
-            {
-                if (Engine.volume > 0.1f)
-                {
-                    Engine.volume -= Time.deltaTime;
-                }
-            }      
-
-    }
-
-
-    public void GearChange()
-    {
-        if (Speed.Speed > 30 & Speed.Speed < 31)
+        if (Controller.CurrentGear != lastGear)
         {
-            if(GearChangeSound.isPlaying == false)
-            {
-                GearChangeSound.Play();
-            }
-        }
-
-        if (Speed.Speed > 60 & Speed.Speed < 61)
-        {
-            if (GearChangeSound.isPlaying == false)
-            {
-                GearChangeSound.Play();
-            }
-        }
-
-        if (Speed.Speed > 90 & Speed.Speed < 91)
-        {
-            if (GearChangeSound.isPlaying == false)
-            {
-                GearChangeSound.Play();
-            }
-        }
-
-        if (Speed.Speed > 120 & Speed.Speed < 121)
-        {
-            if (GearChangeSound.isPlaying == false)
-            {
-                GearChangeSound.Play();
-            }
-        }
-
-        if (Speed.Speed > 150 & Speed.Speed < 151)
-        {
-            if (GearChangeSound.isPlaying == false)
-            {
-                GearChangeSound.Play();
-            }
-        }
-
-        if (Speed.Speed > 180 & Speed.Speed < 181)
-        {
-            if (GearChangeSound.isPlaying == false)
-            {
-                GearChangeSound.Play();
-            }
+            if (GearChangeSound != null) GearChangeSound.Play();
+            lastGear = Controller.CurrentGear;
         }
     }
-
-    public void PitchControl()
-    {
-        if (Speed.Speed > 0 & Speed.Speed < 30)
-        {
-            Engine.pitch = Speed.Speed * PitchOffSet1;
-        }
-
-        if (Speed.Speed > 30 & Speed.Speed < 60)
-        {
-            Engine.pitch = Speed.Speed * PitchOffSet2;
-        }
-
-        if (Speed.Speed > 60 & Speed.Speed < 90)
-        {
-            Engine.pitch = Speed.Speed * PitchOffSet3;
-        }
-
-        if (Speed.Speed > 90 & Speed.Speed < 120)
-        {
-            Engine.pitch = Speed.Speed * PitchOffSet4;
-        }
-
-        if (Speed.Speed > 120 & Speed.Speed < 150)
-        {
-            Engine.pitch = Speed.Speed * PitchOffSet5;
-        }
-
-        if (Speed.Speed > 150)
-        {
-            Engine.pitch = Speed.Speed * PitchOffSet6;
-        }
-    }
-
-
 }

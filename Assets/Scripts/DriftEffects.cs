@@ -2,72 +2,68 @@ using UnityEngine;
 
 public class DriftEffects : MonoBehaviour
 {
-    [Header("Задние колёса (физика)")]
-    public WheelCollider rearLeft, rearRight;
+    [Header("Задние колёса")]
+    public WheelCollider rearLeft;
+    public WheelCollider rearRight;
+    public WheelController controller;
 
-    [Header("Дым из-под колёс")]
-    public ParticleSystem smokeRL, smokeRR;
-
-    [Header("Условия появления дыма")]
-    public float slipThreshold = 0.75f;
-    public float minSpeed = 6f;
-    public float minSpeedHandbrake = 4f;
-
-    [Header("Густота")]
-    public float rateMin = 30f;   // эмиссия в лёгком заносе
-    public float rateMax = 80f;   // эмиссия в глубоком дрифте
+    [Header("Дым")]
+    public ParticleSystem smokeRL;
+    public ParticleSystem smokeRR;
+    public float slipThreshold = 0.32f;
+    public float minSpeedKph = 18f;
+    public float rateMin = 30f;
+    public float rateMax = 110f;
 
     private Rigidbody rb;
 
-    void Start()
+    private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        if (controller == null) controller = GetComponent<WheelController>();
+    }
+
+    private void Start()
+    {
         StopSmoke(smokeRL);
         StopSmoke(smokeRR);
     }
 
-    void Update()
+    private void Update()
     {
-        float speed = rb.linearVelocity.magnitude;
-        bool handbrake = Input.GetKey(KeyCode.Space);
+        float speedKph = rb == null ? 0f : rb.linearVelocity.magnitude * 3.6f;
+        bool handbrake = controller != null ? controller.IsHandbraking : Input.GetKey(KeyCode.Space);
 
-        UpdateSmoke(rearLeft, smokeRL, speed, handbrake);
-        UpdateSmoke(rearRight, smokeRR, speed, handbrake);
+        UpdateSmoke(rearLeft, smokeRL, speedKph, handbrake);
+        UpdateSmoke(rearRight, smokeRR, speedKph, handbrake);
     }
 
-    void UpdateSmoke(WheelCollider wheel, ParticleSystem smoke, float speed, bool handbrake)
+    private void UpdateSmoke(WheelCollider wheel, ParticleSystem smoke, float speedKph, bool handbrake)
     {
-        if (smoke == null || wheel == null) return;
-
-        WheelHit hit;
-        if (!wheel.GetGroundHit(out hit))
+        if (smoke == null || wheel == null || !wheel.GetGroundHit(out WheelHit hit))
         {
             StopSmoke(smoke);
             return;
         }
 
-        float slip = Mathf.Abs(hit.sidewaysSlip);
-        bool driftSmoke = slip > slipThreshold && speed > minSpeed;
-        bool handbrakeSmoke = handbrake && speed > minSpeedHandbrake;
+        float slip = Mathf.Max(Mathf.Abs(hit.sidewaysSlip), Mathf.Abs(hit.forwardSlip) * 0.7f);
+        bool shouldSmoke = speedKph > minSpeedKph && (slip > slipThreshold || handbrake);
 
-        if (driftSmoke || handbrakeSmoke)
-        {
-            if (!smoke.isPlaying) smoke.Play();
-
-            // чем глубже занос — тем гуще дым
-            var emission = smoke.emission;
-            emission.rateOverTimeMultiplier = Mathf.Lerp(rateMin, rateMax, Mathf.Clamp01(slip));
-        }
-        else
+        if (!shouldSmoke)
         {
             StopSmoke(smoke);
+            return;
         }
+
+        if (!smoke.isPlaying) smoke.Play();
+        ParticleSystem.EmissionModule emission = smoke.emission;
+        float intensity = Mathf.InverseLerp(slipThreshold, 1.2f, slip);
+        emission.rateOverTimeMultiplier = Mathf.Lerp(rateMin, rateMax, intensity);
     }
 
-    void StopSmoke(ParticleSystem smoke)
+    private static void StopSmoke(ParticleSystem smoke)
     {
-        if (smoke == null) return;
-        // прекращаем рождение новы даём старым дожить и растаять
-        if (smoke.isPlaying) smoke.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+        if (smoke != null && smoke.isPlaying)
+            smoke.Stop(true, ParticleSystemStopBehavior.StopEmitting);
     }
 }
