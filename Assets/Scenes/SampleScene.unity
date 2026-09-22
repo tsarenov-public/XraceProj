@@ -1022,9 +1022,11 @@ MonoBehaviour:
   lowSpeedSteerAngle: 38
   highSpeedSteerAngle: 11
   fullSteerFadeSpeedKph: 150
-  counterSteerAssist: 0.72
+  counterSteerAssist: 0.82
   counterSteerStartAngle: 4
-  counterSteerMaxAngle: 28
+  counterSteerMaxAngle: 34
+  minimumDriftSteerAngle: 24
+  counterSteerPrediction: 0.16
   wheelbase: 3.07
   trackWidth: 1.57
   peakEngineTorque: 460
@@ -1051,15 +1053,25 @@ MonoBehaviour:
   absSlipLimit: 0.95
   frontSidewaysStiffness: 1.35
   rearSidewaysStiffness: 1.16
-  powerSlideRearStiffness: 0.78
+  powerSlideRearStiffness: 0.82
   handbrakeRearStiffness: 0.36
   gripChangeSpeed: 5
+  gripRecoverySpeed: 1.45
   driftMinSpeedKph: 22
   driftSustainSlip: 0.22
-  driftYawAssist: 650
-  spinRecoveryStartAngle: 52
-  spinRecoveryFullAngle: 78
-  spinRecoveryTorque: 2100
+  driftYawAssist: 520
+  driftYawAssistFadeAngle: 32
+  driftStabilityAssist: 0.78
+  driftStabilityStartAngle: 30
+  driftStabilityTorque: 950
+  driftYawDamping: 760
+  maxDriftYawRate: 1.45
+  spinRecoveryStartAngle: 44
+  spinRecoveryFullAngle: 68
+  spinRecoveryTorque: 2700
+  spinPowerLimitStartAngle: 40
+  spinPowerLimitFullAngle: 66
+  minimumDriftPower: 0.58
   antiRollFront: 7200
   antiRollRear: 6100
   aerodynamicDownforce: 8
