@@ -20,13 +20,13 @@ public class WheelController : MonoBehaviour
     public float highSpeedSteerAngle = 11f;
     [Tooltip("Скорость в км/ч, на которой используется минимальный угол руля")]
     public float fullSteerFadeSpeedKph = 150f;
-    [Range(0f, 1f)] public float counterSteerAssist = 0.82f;
+    [Range(0f, 1f)] public float counterSteerAssist = 0.86f;
     public float counterSteerStartAngle = 4f;
     public float counterSteerMaxAngle = 34f;
     [Tooltip("Минимальный доступный угол контрруления в заносе на высокой скорости")]
-    public float minimumDriftSteerAngle = 24f;
+    public float minimumDriftSteerAngle = 26f;
     [Tooltip("Насколько заранее ассистент прогнозирует развитие заноса")]
-    [Range(0f, 0.35f)] public float counterSteerPrediction = 0.16f;
+    [Range(0f, 0.35f)] public float counterSteerPrediction = 0.19f;
     public float wheelbase = 3.07f;
     public float trackWidth = 1.57f;
 
@@ -56,7 +56,11 @@ public class WheelController : MonoBehaviour
     [Header("Шины и дрифт")]
     public float frontSidewaysStiffness = 1.35f;
     public float rearSidewaysStiffness = 1.16f;
-    public float powerSlideRearStiffness = 0.82f;
+    [Tooltip("Зацеп задней оси после выхода на устойчивый угол заноса")]
+    public float powerSlideRearStiffness = 0.86f;
+    [Tooltip("Кратковременное снижение зацепа при намеренной инициации газом и рулём")]
+    public float driftEntryRearStiffness = 0.69f;
+    public float driftEntryCompleteAngle = 18f;
     public float handbrakeRearStiffness = 0.36f;
     public float gripChangeSpeed = 5f;
     [Tooltip("Медленный возврат сцепления не даёт машине резко выстреливать из заноса")]
@@ -64,24 +68,24 @@ public class WheelController : MonoBehaviour
     public float driftMinSpeedKph = 22f;
     public float driftSustainSlip = 0.22f;
     [Tooltip("Небольшая помощь вращению машины при начале силового заноса")]
-    public float driftYawAssist = 520f;
+    public float driftYawAssist = 640f;
     [Tooltip("После этого угла помощь инициации плавно отключается")]
     public float driftYawAssistFadeAngle = 32f;
-    [Range(0f, 1f)] public float driftStabilityAssist = 0.78f;
+    [Range(0f, 1f)] public float driftStabilityAssist = 0.84f;
     [Tooltip("С этого угла система начинает плавно гасить лишнее вращение кузова")]
     public float driftStabilityStartAngle = 30f;
-    public float driftStabilityTorque = 950f;
-    public float driftYawDamping = 760f;
+    public float driftStabilityTorque = 1050f;
+    public float driftYawDamping = 820f;
     [Tooltip("Допустимая скорость вращения кузова в устойчивом заносе (радиан/с)")]
-    public float maxDriftYawRate = 1.45f;
+    public float maxDriftYawRate = 1.32f;
     [Tooltip("После этого угла ассистент начинает мягко ловить разворот")]
-    public float spinRecoveryStartAngle = 44f;
-    public float spinRecoveryFullAngle = 68f;
-    public float spinRecoveryTorque = 2700f;
+    public float spinRecoveryStartAngle = 42f;
+    public float spinRecoveryFullAngle = 65f;
+    public float spinRecoveryTorque = 2900f;
     [Tooltip("На большом угле газ немного ограничивается, чтобы задние колёса снова получили боковой зацеп")]
-    public float spinPowerLimitStartAngle = 40f;
-    public float spinPowerLimitFullAngle = 66f;
-    [Range(0.2f, 1f)] public float minimumDriftPower = 0.58f;
+    public float spinPowerLimitStartAngle = 38f;
+    public float spinPowerLimitFullAngle = 63f;
+    [Range(0.2f, 1f)] public float minimumDriftPower = 0.52f;
 
     [Header("Шасси")]
     public float antiRollFront = 7200f;
@@ -110,6 +114,7 @@ public class WheelController : MonoBehaviour
     private float rawSteerInput;
     private float smoothedSteerInput;
     private float rearGripBlend;
+    private float driftEntryIntent;
     private float shiftTimer;
     private float clutch = 1f;
     private int pendingShift;
@@ -441,14 +446,29 @@ public class WheelController : MonoBehaviour
         bool movingForward = Vector3.Dot(RB.linearVelocity, transform.forward) > 1f;
         float rearSlip = AverageRearSlip();
         float speedFactor = Mathf.InverseLerp(driftMinSpeedKph, 70f, speedKph);
+        float entrySpeedFactor = Mathf.InverseLerp(driftMinSpeedKph, 50f, speedKph);
         float powerOversteer = ThrottleInput * Mathf.Abs(smoothedSteerInput) * speedFactor;
         float sustainedSlide = Mathf.InverseLerp(driftSustainSlip, 0.9f, rearSlip) * speedFactor;
-        float targetDrift = movingForward ? Mathf.Max(powerOversteer, sustainedSlide) : 0f;
+        float entryAngleFade = 1f - Mathf.InverseLerp(
+            driftEntryCompleteAngle * 0.55f,
+            driftEntryCompleteAngle,
+            Mathf.Abs(DriftAngle));
+        driftEntryIntent = Mathf.InverseLerp(0.18f, 0.72f, Mathf.Abs(smoothedSteerInput))
+            * Mathf.InverseLerp(0.25f, 0.85f, ThrottleInput)
+            * entrySpeedFactor
+            * entryAngleFade;
+        float targetDrift = movingForward
+            ? Mathf.Max(driftEntryIntent, Mathf.Max(powerOversteer, sustainedSlide))
+            : 0f;
         if (IsHandbraking && speedKph > 8f) targetDrift = 1f;
 
         float gripBlendSpeed = targetDrift > rearGripBlend ? gripChangeSpeed : gripRecoverySpeed;
         rearGripBlend = Mathf.MoveTowards(rearGripBlend, targetDrift, gripBlendSpeed * Time.fixedDeltaTime);
-        float targetRearStiffness = Mathf.Lerp(rearSidewaysStiffness, powerSlideRearStiffness, rearGripBlend);
+        float slidingRearStiffness = Mathf.Lerp(
+            powerSlideRearStiffness,
+            driftEntryRearStiffness,
+            driftEntryIntent);
+        float targetRearStiffness = Mathf.Lerp(rearSidewaysStiffness, slidingRearStiffness, rearGripBlend);
         if (IsHandbraking) targetRearStiffness = handbrakeRearStiffness;
 
         float recovery = Mathf.InverseLerp(spinRecoveryStartAngle, spinRecoveryFullAngle, Mathf.Abs(DriftAngle));
@@ -467,7 +487,13 @@ public class WheelController : MonoBehaviour
         SetSidewaysStiffness(rearRight, targetRearStiffness);
         SetRearForwardGrip(IsHandbraking ? 0.72f : 1.24f);
 
-        if (!IsHandbraking && targetDrift > 0.25f && Mathf.Abs(DriftAngle) < driftYawAssistFadeAngle)
+        bool steeringIntoSlide = Mathf.Abs(DriftAngle) < 2f
+            || Mathf.Sign(smoothedSteerInput) == -Mathf.Sign(DriftAngle);
+        if (!IsHandbraking
+            && movingForward
+            && steeringIntoSlide
+            && driftEntryIntent > 0.05f
+            && Mathf.Abs(DriftAngle) < driftYawAssistFadeAngle)
         {
             // DriftAngle has the opposite sign to the body's yaw in a powerslide.
             float yawDirection = Mathf.Abs(DriftAngle) > 2f ? -Mathf.Sign(DriftAngle) : Mathf.Sign(smoothedSteerInput);
@@ -476,7 +502,7 @@ public class WheelController : MonoBehaviour
                 driftYawAssistFadeAngle,
                 Mathf.Abs(DriftAngle));
             RB.AddTorque(
-                transform.up * yawDirection * driftYawAssist * targetDrift * initiationFade,
+                transform.up * yawDirection * driftYawAssist * driftEntryIntent * initiationFade,
                 ForceMode.Force);
         }
 
@@ -506,8 +532,9 @@ public class WheelController : MonoBehaviour
             absoluteAngle);
         float yawRate = Vector3.Dot(RB.angularVelocity, transform.up);
         float excessYawRate = Mathf.Max(0f, Mathf.Abs(yawRate) - maxDriftYawRate);
+        float entrySuppression = 1f - driftEntryIntent * 0.82f;
 
-        float stabilizingTorque = -yawRate * driftYawDamping * slideAmount;
+        float stabilizingTorque = -yawRate * driftYawDamping * slideAmount * entrySuppression;
         stabilizingTorque += Mathf.Sign(DriftAngle) * driftStabilityTorque * angleCorrection;
         stabilizingTorque -= Mathf.Sign(yawRate) * excessYawRate * spinRecoveryTorque;
         stabilizingTorque -= yawRate * spinRecoveryTorque * recovery;

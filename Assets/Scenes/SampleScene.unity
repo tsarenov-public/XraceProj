@@ -1022,11 +1022,11 @@ MonoBehaviour:
   lowSpeedSteerAngle: 38
   highSpeedSteerAngle: 11
   fullSteerFadeSpeedKph: 150
-  counterSteerAssist: 0.82
+  counterSteerAssist: 0.86
   counterSteerStartAngle: 4
   counterSteerMaxAngle: 34
-  minimumDriftSteerAngle: 24
-  counterSteerPrediction: 0.16
+  minimumDriftSteerAngle: 26
+  counterSteerPrediction: 0.19
   wheelbase: 3.07
   trackWidth: 1.57
   peakEngineTorque: 460
@@ -1053,25 +1053,27 @@ MonoBehaviour:
   absSlipLimit: 0.95
   frontSidewaysStiffness: 1.35
   rearSidewaysStiffness: 1.16
-  powerSlideRearStiffness: 0.82
+  powerSlideRearStiffness: 0.86
+  driftEntryRearStiffness: 0.69
+  driftEntryCompleteAngle: 18
   handbrakeRearStiffness: 0.36
   gripChangeSpeed: 5
   gripRecoverySpeed: 1.45
   driftMinSpeedKph: 22
   driftSustainSlip: 0.22
-  driftYawAssist: 520
+  driftYawAssist: 640
   driftYawAssistFadeAngle: 32
-  driftStabilityAssist: 0.78
+  driftStabilityAssist: 0.84
   driftStabilityStartAngle: 30
-  driftStabilityTorque: 950
-  driftYawDamping: 760
-  maxDriftYawRate: 1.45
-  spinRecoveryStartAngle: 44
-  spinRecoveryFullAngle: 68
-  spinRecoveryTorque: 2700
-  spinPowerLimitStartAngle: 40
-  spinPowerLimitFullAngle: 66
-  minimumDriftPower: 0.58
+  driftStabilityTorque: 1050
+  driftYawDamping: 820
+  maxDriftYawRate: 1.32
+  spinRecoveryStartAngle: 42
+  spinRecoveryFullAngle: 65
+  spinRecoveryTorque: 2900
+  spinPowerLimitStartAngle: 38
+  spinPowerLimitFullAngle: 63
+  minimumDriftPower: 0.52
   antiRollFront: 7200
   antiRollRear: 6100
   aerodynamicDownforce: 8
@@ -1093,11 +1095,25 @@ MonoBehaviour:
   Engine: {fileID: 1577001304}
   GearChangeSound: {fileID: 628017710}
   Controller: {fileID: 304337677}
-  idlePitch: 0.75
-  redlinePitch: 2.05
-  idleVolume: 0.16
-  throttleVolume: 0.82
-  audioResponse: 7
+  idleClip: {fileID: 8300000, guid: fcbac167aadbc62458a5932e1663a958, type: 3}
+  lowOnClip: {fileID: 8300000, guid: 7cc945fccaddf0c48a6fa20065d0d762, type: 3}
+  mediumOnClip: {fileID: 8300000, guid: 52ee6439e2a5bf749832ea3e0c42d1c7, type: 3}
+  highOnClip: {fileID: 8300000, guid: 0c62ed23f67dfb647a66e0b33f8083d3, type: 3}
+  lowOffClip: {fileID: 8300000, guid: 3909986b916ea7a4b9a35c647f7c5abe, type: 3}
+  mediumOffClip: {fileID: 8300000, guid: 76f8cd9b1282cb94b9d60ce8645bc650, type: 3}
+  highOffClip: {fileID: 8300000, guid: 1e71fc686f07c6c4bb4940b61c4f9984, type: 3}
+  limiterClip: {fileID: 8300000, guid: 23303bc2857931747a69691ba7addedb, type: 3}
+  masterVolume: 0.82
+  idleVolume: 0.34
+  onThrottleVolume: 0.9
+  offThrottleVolume: 0.58
+  limiterVolume: 0.38
+  idleRoughness: 0.025
+  rpmResponse: 11
+  throttleResponse: 8
+  volumeResponse: 12
+  gearShiftVolumeDip: 0.38
+  gearShiftRecovery: 0.16
 --- !u!114 &304337679
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1406,7 +1422,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 8300000, guid: f772a702dcfbfe9478afe01aa9429fbc, type: 3}
-  m_PlayOnAwake: 1
+  m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
   Loop: 0
