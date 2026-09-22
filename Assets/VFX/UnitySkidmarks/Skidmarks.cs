@@ -52,6 +52,11 @@ public class Skidmarks : MonoBehaviour {
 	// #### UNITY INTERNAL METHODS ####
 
 	protected void Awake() {
+		// A car prefab may carry its own controller. Detach it so generated marks
+		// remain in world space instead of following the moving vehicle.
+		if (transform.parent != null) {
+			transform.SetParent(null, true);
+		}
 		if (transform.position != Vector3.zero) {
 			Debug.LogWarning("Skidmarks.cs transform must be at 0,0,0. Setting it to zero now.");
 			transform.position = Vector3.zero;
