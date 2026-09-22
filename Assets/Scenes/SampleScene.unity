@@ -746,24 +746,41 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RacingCamera
   target: {fileID: 304337672}
   targetRb: {fileID: 304337673}
-  heightStand: 2
-  heightDrive: 2.3
-  distanceStand: 6.5
-  distanceDrive: 3.2
-  maxDistanceSpeed: 22
-  positionSmoothTime: 0.2
-  lookHeight: 1.2
-  lookDistance: 8
-  forwardLookBias: 0.6
-  rotationSmoothTime: 0.15
-  minFov: 60
-  maxFov: 85
-  fovSmoothTime: 0.3
-  driftRollMax: 3
+  targetOffset: {x: 0, y: 1.15, z: 0.15}
+  standDistance: 6.2
+  highSpeedDistance: 7.6
+  standHeight: 1.35
+  highSpeedHeight: 1.7
+  fullDistanceSpeedKph: 160
+  positionSmoothTime: 0.14
+  accelerationDistance: 0.35
+  teleportDistance: 18
+  trajectoryInfluence: 0.55
+  headingSharpness: 5.5
+  lookAheadDistance: 5.5
+  velocityLookAhead: 0.14
+  maxDriftRoll: 3
+  accelerationPitch: 1.1
+  rotationSharpness: 9
+  minFov: 62
+  maxFov: 78
+  fullFovSpeedKph: 180
+  driftFovBonus: 3.5
+  fovSharpness: 3.5
   blockingLayers:
     serializedVersion: 2
-    m_Bits: 0
-  collisionRadius: 0.3
+    m_Bits: 4294967295
+  collisionRadius: 0.32
+  collisionSkin: 0.08
+  collisionReturnSharpness: 10
+  enableMouseOrbit: 1
+  mouseSensitivityX: 3
+  mouseSensitivityY: 2.2
+  minOrbitPitch: -12
+  maxOrbitPitch: 28
+  orbitRecenterDelay: 1
+  orbitRecenterSharpness: 3.5
+  rearViewKey: 99
 --- !u!1 &288559099
 GameObject:
   m_ObjectHideFlags: 0
