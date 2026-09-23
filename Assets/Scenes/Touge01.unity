@@ -1743,7 +1743,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1975153726052898245, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       propertyPath: standHeight
-      value: 1.7
+      value: 1.35
       objectReference: {fileID: 0}
     - target: {fileID: 1975153726052898245, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       propertyPath: standDistance

@@ -5,6 +5,7 @@ public class PopupHeadlights : MonoBehaviour
 {
     [Header("Управление")]
     public KeyCode toggleKey = KeyCode.L;
+    public KeyCode highBeamKey = KeyCode.O;
     public bool startRaised;
     [Min(0.1f)] public float movementSpeed = 4.5f;
 
@@ -17,14 +18,22 @@ public class PopupHeadlights : MonoBehaviour
     public Light leftLight;
     public Light rightLight;
     [Min(0f)] public float lightIntensity = 12f;
+    [Min(0f)] public float lowBeamRange = 42f;
+    [Min(0f)] public float highBeamIntensity = 30f;
+    [Min(0f)] public float highBeamRange = 80f;
+    [Range(1f, 179f)] public float lowBeamSpotAngle = 52f;
+    [Range(1f, 179f)] public float highBeamSpotAngle = 34f;
 
     public bool IsRaised { get; private set; }
+    public bool IsLowBeamOn { get; private set; }
+    public bool IsHighBeamOn { get; private set; }
 
     private float openAmount;
 
     private void Awake()
     {
-        IsRaised = startRaised;
+        IsLowBeamOn = startRaised;
+        IsRaised = IsLowBeamOn;
         openAmount = IsRaised ? 1f : 0f;
         ApplyState();
     }
@@ -32,7 +41,11 @@ public class PopupHeadlights : MonoBehaviour
     private void Update()
     {
         if (Input.GetKeyDown(toggleKey))
-            IsRaised = !IsRaised;
+            IsLowBeamOn = !IsLowBeamOn;
+        if (Input.GetKeyDown(highBeamKey))
+            IsHighBeamOn = !IsHighBeamOn;
+
+        IsRaised = IsLowBeamOn || IsHighBeamOn;
 
         openAmount = Mathf.MoveTowards(
             openAmount,
@@ -43,7 +56,8 @@ public class PopupHeadlights : MonoBehaviour
 
     public void SetRaised(bool raised)
     {
-        IsRaised = raised;
+        IsLowBeamOn = raised;
+        IsRaised = IsLowBeamOn || IsHighBeamOn;
     }
 
     private void ApplyState()
@@ -66,6 +80,9 @@ public class PopupHeadlights : MonoBehaviour
             return;
 
         lamp.enabled = amount > 0.02f;
-        lamp.intensity = lightIntensity * amount;
+        lamp.intensity = (IsHighBeamOn ? highBeamIntensity : lightIntensity) * amount;
+        lamp.range = IsHighBeamOn ? highBeamRange : lowBeamRange;
+        lamp.spotAngle = IsHighBeamOn ? highBeamSpotAngle : lowBeamSpotAngle;
+        lamp.innerSpotAngle = lamp.spotAngle * 0.58f;
     }
 }

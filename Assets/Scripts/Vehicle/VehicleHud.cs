@@ -5,6 +5,8 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(500)]
 public sealed class VehicleHud : MonoBehaviour
 {
+    private const float GaugeMaximumRpm = 10000f;
+
     public WheelController controller;
 
     private Canvas canvas;
@@ -47,17 +49,18 @@ public sealed class VehicleHud : MonoBehaviour
         displayedSpeed = Mathf.Lerp(displayedSpeed, controller.SpeedKph, smoothing);
         displayedRpm = Mathf.Lerp(displayedRpm, controller.EngineRpm, smoothing);
 
-        speedText.text = Mathf.RoundToInt(Mathf.Max(0f, displayedSpeed)).ToString("000");
+        speedText.text = Mathf.RoundToInt(Mathf.Max(0f, displayedSpeed)).ToString("0");
         gearText.text = controller.GearLabel;
         gearText.color = controller.CurrentGear < 0
             ? new Color(1f, 0.3f, 0.24f)
             : controller.CurrentGear == 0
                 ? new Color(0.62f, 0.7f, 0.76f)
                 : Color.white;
-        rpmText.text = $"RPM  {Mathf.RoundToInt(displayedRpm):N0}";
+        rpmText.text = $"{Mathf.RoundToInt(displayedRpm):0000}  RPM";
 
-        float normalizedRpm = displayedRpm / Mathf.Max(1f, controller.redlineRpm);
-        gauge.SetRpm(normalizedRpm);
+        float normalizedRpm = displayedRpm / GaugeMaximumRpm;
+        float normalizedRedline = controller.redlineRpm / GaugeMaximumRpm;
+        gauge.SetRpm(normalizedRpm, normalizedRedline);
     }
 
     private void OnDestroy()
@@ -90,40 +93,62 @@ public sealed class VehicleHud : MonoBehaviour
         gaugeRect.anchorMin = new Vector2(1f, 0f);
         gaugeRect.anchorMax = new Vector2(1f, 0f);
         gaugeRect.pivot = new Vector2(1f, 0f);
-        gaugeRect.anchoredPosition = new Vector2(-32f, 26f);
-        gaugeRect.sizeDelta = new Vector2(330f, 270f);
+        gaugeRect.anchoredPosition = new Vector2(-32f, 24f);
+        gaugeRect.sizeDelta = new Vector2(330f, 300f);
         gauge = gaugeObject.GetComponent<SpeedometerGaugeGraphic>();
         gauge.raycastTarget = false;
 
-        speedText = CreateText(gaugeRect, "Speed", font, 66, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(speedText.rectTransform, new Vector2(0f, -10f), new Vector2(205f, 80f));
-        speedText.text = "000";
+        CreateRpmLabels(gaugeRect, font);
+
+        gearText = CreateText(gaugeRect, "Gear", font, 104, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(gearText.rectTransform, new Vector2(0f, 16f), new Vector2(130f, 125f));
+        gearText.text = "1";
+        AddOutline(gearText, new Color(0f, 0f, 0f, 0.85f), new Vector2(3f, -3f));
+
+        speedText = CreateText(gaugeRect, "Speed", font, 58, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(speedText.rectTransform, new Vector2(73f, -88f), new Vector2(135f, 70f));
+        speedText.text = "0";
         AddOutline(speedText, new Color(0f, 0f, 0f, 0.75f), new Vector2(2f, -2f));
 
-        Text unitText = CreateText(gaugeRect, "Units", font, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(unitText.rectTransform, new Vector2(0f, -58f), new Vector2(100f, 24f));
+        Text unitText = CreateText(gaugeRect, "Units", font, 13, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(unitText.rectTransform, new Vector2(73f, -124f), new Vector2(90f, 22f));
         unitText.text = "KM/H";
-        unitText.color = new Color(0.45f, 0.84f, 0.9f);
+        unitText.color = new Color(0.72f, 0.76f, 0.78f);
 
-        Text gearCaption = CreateText(gaugeRect, "Gear Caption", font, 12, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(gearCaption.rectTransform, new Vector2(-83f, 61f), new Vector2(70f, 20f));
-        gearCaption.text = "GEAR";
-        gearCaption.color = new Color(0.45f, 0.84f, 0.9f);
+        rpmText = CreateText(gaugeRect, "Rpm", font, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(rpmText.rectTransform, new Vector2(0f, -51f), new Vector2(150f, 26f));
+        rpmText.text = "0900  RPM";
+        rpmText.color = new Color(0.78f, 0.82f, 0.84f);
 
-        gearText = CreateText(gaugeRect, "Gear", font, 38, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(gearText.rectTransform, new Vector2(-83f, 28f), new Vector2(72f, 52f));
-        gearText.text = "1";
-        AddOutline(gearText, new Color(0f, 0f, 0f, 0.7f), new Vector2(1.5f, -1.5f));
+        Text rpmScaleText = CreateText(gaugeRect, "Rpm Scale", font, 10, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(rpmScaleText.rectTransform, new Vector2(0f, -69f), new Vector2(100f, 18f));
+        rpmScaleText.text = "RPM ×1000";
+        rpmScaleText.color = new Color(0.48f, 0.52f, 0.54f);
 
-        rpmText = CreateText(gaugeRect, "Rpm", font, 18, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(rpmText.rectTransform, new Vector2(67f, 43f), new Vector2(140f, 30f));
-        rpmText.text = "RPM  900";
-        rpmText.color = new Color(0.82f, 0.88f, 0.91f);
+        Text gameMark = CreateText(gaugeRect, "Game Mark", font, 17, FontStyle.BoldAndItalic, TextAnchor.MiddleCenter);
+        SetRect(gameMark.rectTransform, new Vector2(132f, -110f), new Vector2(58f, 25f));
+        gameMark.text = "XR";
+        gameMark.color = new Color(0.94f, 0.08f, 0.28f);
+    }
 
-        Text shiftHint = CreateText(gaugeRect, "Shift Hint", font, 11, FontStyle.Normal, TextAnchor.MiddleCenter);
-        SetRect(shiftHint.rectTransform, new Vector2(0f, -92f), new Vector2(190f, 22f));
-        shiftHint.text = "Q  SHIFT  E";
-        shiftHint.color = new Color(0.42f, 0.48f, 0.52f, 0.9f);
+    private static void CreateRpmLabels(RectTransform parent, Font font)
+    {
+        Vector2 center = new Vector2(0f, -7f);
+        const float labelRadius = 104f;
+        for (int value = 0; value <= 10; value++)
+        {
+            float t = value / 10f;
+            float angle = Mathf.Lerp(SpeedometerGaugeGraphic.StartAngle, SpeedometerGaugeGraphic.EndAngle, t);
+            float radians = angle * Mathf.Deg2Rad;
+            Vector2 position = center + new Vector2(Mathf.Cos(radians), Mathf.Sin(radians)) * labelRadius;
+            Text label = CreateText(parent, "RPM " + value, font, 13, FontStyle.Bold, TextAnchor.MiddleCenter);
+            SetRect(label.rectTransform, position, new Vector2(28f, 22f));
+            label.text = value.ToString();
+            label.color = t >= 0.78f
+                ? new Color(1f, 0.25f, 0.2f)
+                : new Color(0.92f, 0.94f, 0.95f);
+            AddOutline(label, new Color(0f, 0f, 0f, 0.8f), new Vector2(1f, -1f));
+        }
     }
 
     private static Text CreateText(
@@ -169,18 +194,21 @@ public sealed class VehicleHud : MonoBehaviour
 internal sealed class SpeedometerGaugeGraphic : MaskableGraphic
 {
     private const int ArcSegments = 64;
-    private const float StartAngle = 210f;
-    private const float EndAngle = -30f;
+    public const float StartAngle = 250f;
+    public const float EndAngle = -20f;
 
     private float rpm01;
+    private float redline01 = 0.78f;
 
-    public void SetRpm(float value)
+    public void SetRpm(float value, float redline)
     {
         float clamped = Mathf.Clamp01(value);
-        if (Mathf.Abs(rpm01 - clamped) < 0.001f)
+        float clampedRedline = Mathf.Clamp01(redline);
+        if (Mathf.Abs(rpm01 - clamped) < 0.001f && Mathf.Abs(redline01 - clampedRedline) < 0.001f)
             return;
 
         rpm01 = clamped;
+        redline01 = clampedRedline;
         SetVerticesDirty();
     }
 
@@ -192,15 +220,19 @@ internal sealed class SpeedometerGaugeGraphic : MaskableGraphic
         Vector2 center = rect.center + new Vector2(0f, -7f);
         float radius = Mathf.Min(rect.width, rect.height) * 0.46f;
 
-        AddDisc(vertexHelper, center, radius, new Color32(7, 11, 16, 220));
-        AddArc(vertexHelper, center, radius - 5f, 11f, 0f, 1f, new Color32(45, 53, 61, 235));
-        AddArc(vertexHelper, center, radius - 5f, 7f, 0f, rpm01, GaugeColor(rpm01));
+        AddDisc(vertexHelper, center, radius, new Color32(5, 8, 12, 205));
+        AddArc(vertexHelper, center, radius - 5f, 12f, 0f, 1f, new Color32(56, 60, 64, 225));
+        float normalRpm = Mathf.Min(rpm01, redline01);
+        if (normalRpm > 0f)
+            AddArc(vertexHelper, center, radius - 5f, 8f, 0f, normalRpm, new Color32(238, 242, 244, 255));
+        if (rpm01 > redline01)
+            AddArc(vertexHelper, center, radius - 5f, 8f, redline01, rpm01, new Color32(255, 49, 42, 255));
 
         for (int i = 0; i <= 16; i++)
         {
             float t = i / 16f;
             bool major = i % 2 == 0;
-            Color32 tickColor = t >= 0.86f
+            Color32 tickColor = t >= redline01
                 ? new Color32(255, 74, 58, 245)
                 : new Color32(196, 213, 220, major ? (byte)235 : (byte)130);
             AddRadialLine(
@@ -223,14 +255,6 @@ internal sealed class SpeedometerGaugeGraphic : MaskableGraphic
             center + direction * (radius - 35f),
             new Color32(255, 88, 62, 255));
         AddDisc(vertexHelper, center, 8f, new Color32(225, 235, 238, 255), 20);
-    }
-
-    private static Color32 GaugeColor(float value)
-    {
-        Color color = value < 0.82f
-            ? Color.Lerp(new Color(0.18f, 0.72f, 0.82f), new Color(0.46f, 0.9f, 0.72f), value / 0.82f)
-            : Color.Lerp(new Color(1f, 0.64f, 0.16f), new Color(1f, 0.2f, 0.12f), Mathf.InverseLerp(0.82f, 1f, value));
-        return color;
     }
 
     private static void AddDisc(VertexHelper helper, Vector2 center, float radius, Color32 color, int segments = 64)

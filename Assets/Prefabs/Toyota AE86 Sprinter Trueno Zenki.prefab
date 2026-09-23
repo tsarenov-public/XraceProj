@@ -216,13 +216,13 @@ MonoBehaviour:
   target: {fileID: 1807735226470950503}
   targetRb: {fileID: 5481150008009859827}
   targetOffset: {x: 0, y: 1.05, z: 0.12}
-  standDistance: 5.8
-  highSpeedDistance: 7.2
-  standHeight: 1.25
-  highSpeedHeight: 1.55
+  standDistance: 4.8
+  highSpeedDistance: 5.35
+  standHeight: 1.2
+  highSpeedHeight: 1.38
   fullDistanceSpeedKph: 160
   positionSmoothTime: 0.14
-  accelerationDistance: 0.35
+  accelerationDistance: 0.1
   teleportDistance: 18
   trajectoryInfluence: 0.55
   headingSharpness: 5.5
@@ -536,6 +536,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PopupHeadlights
   toggleKey: 108
+  highBeamKey: 111
   startRaised: 0
   movementSpeed: 2.7
   headlightAssembly: {fileID: 1357859360795655655}
@@ -544,6 +545,11 @@ MonoBehaviour:
   leftLight: {fileID: 2877193559473726422}
   rightLight: {fileID: 8578301937973967075}
   lightIntensity: 12
+  lowBeamRange: 42
+  highBeamIntensity: 30
+  highBeamRange: 80
+  lowBeamSpotAngle: 52
+  highBeamSpotAngle: 34
 --- !u!1 &4484378279368370917
 GameObject:
   m_ObjectHideFlags: 0
