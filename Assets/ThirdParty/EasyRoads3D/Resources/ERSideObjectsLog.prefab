@@ -543,11 +543,11 @@ MonoBehaviour:
   roadPresets:
   - roadTypeName: Default Road
     id: 1
-    timestamp: 1520960221.8587415
+    timestamp: 1790190372.390082
     roadWidth: 6
     advancedWidthSettings: 0
-    faceDistance: 2
-    angleTreshold: 45
+    faceDistance: 5
+    angleTreshold: 20
     uvTiling: 1
     uv4Type: 0
     type: 0
@@ -560,8 +560,8 @@ MonoBehaviour:
       - {x: -3, y: 0}
       - {x: 3, y: 0}
       hardEdge: 0000y
-      priorityNodeIndexLeft: 0
-      priorityNodeIndexRight: 1
+      priorityNodeIndexLeft: -1
+      priorityNodeIndexRight: -1
       nodesV3: []
       lanes: []
       leftLanes: -1
@@ -588,19 +588,26 @@ MonoBehaviour:
     - {x: -3, y: 0}
     - {x: 3, y: 0}
     roadShapeExt: []
-    roadShapeExt2: []
-    doConnectionTri: 
+    roadShapeExt2:
+    - {x: -3, y: 0}
+    - {x: 3, y: 0}
+    doConnectionTri: 0101y
     doConnectionTriExt: 
     roadShapeUVs:
     - 0
     - 1
     roadShapeExtUVs: []
-    roadShapeExtUVs2: []
-    roadShapeUVs2:
+    roadShapeExtUVs2:
     - 0
     - 1
+    roadShapeUVs2:
+    - 0
+    - 0.25
+    - 0.5
+    - 0.75
+    - 1
     preserveUVs: 0
-    hardEdge: 
+    hardEdge: 0000y
     roadShapeVecsString: 
     defaultSidewalk: 0
     sidewalks: 0
@@ -620,10 +627,14 @@ MonoBehaviour:
     connectionMaterial: {fileID: 2100000, guid: 3c555588afad81d428ad1704d5d015a7, type: 2}
     isSideObject: 0
     isCustomRoad: 0
-    subSegments: 1
+    subSegments: 4
     soData: []
     soDataExt: []
-    soDataLog: []
+    soDataLog:
+    - id: 1789944327.42431
+      active: 0
+    - id: 1789944468.697474
+      active: 0
     layer: 0
     isStatic: 0
     tag: Untagged
@@ -634,7 +645,7 @@ MonoBehaviour:
     smoothLevel: 0
     splatOpacity: 0
     followTerrainContours: 0
-    terrainContoursOffset: 0
+    terrainContoursOffset: 5
     terrainDeformation: 1
     defaultIndent: 2
     defaultSurrounding: 2
@@ -678,7 +689,7 @@ MonoBehaviour:
     cornerRadiusSecondaryCurvature: 0
     cornerSementsSecondaryRoad: 0
     mainRoadsOnly: 0
-    isRoadShape: 0
+    isRoadShape: 1
     controlType: 0
     vertexColor: {r: 0, g: 0, b: 0, a: 0}
     trafficPosts: []
