@@ -379,13 +379,17 @@ MonoBehaviour:
   counterSteerPrediction: 0.19
   wheelbase: 2.389
   trackWidth: 1.419
-  peakEngineTorque: 285
-  peakTorqueRpm: 5900
+  peakEngineTorque: 160
+  peakTorqueRpm: 5200
   idleRpm: 900
-  redlineRpm: 7900
+  redlineRpm: 7600
   engineRpmResponse: 9
-  engineBrakingTorque: 90
-  drivetrainEfficiency: 0.88
+  throttleResponse: 3.2
+  engineBrakingTorque: 75
+  drivetrainEfficiency: 0.84
+  revLimiterCutDuration: 0.06
+  maximumVehicleSpeedKph: 190
+  topSpeedTorqueFadeRangeKph: 16
   forwardGearRatios:
   - 3.587
   - 2.022
@@ -393,7 +397,7 @@ MonoBehaviour:
   - 1
   - 0.861
   reverseGearRatio: 3.484
-  finalDriveRatio: 4.3
+  finalDriveRatio: 4.778
   shiftDuration: 0.22
   currentGear: 1
   frontBrakeTorque: 2400
@@ -426,7 +430,9 @@ MonoBehaviour:
   antiRollFront: 6500
   antiRollRear: 5500
   aerodynamicDownforce: 6.5
-  aerodynamicDrag: 0.42
+  aerodynamicDrag: 0.5
+  rollingResistance: 125
+  rollingResistancePerSpeed: 2.5
   centerOfMassHeightOffset: -0.22
   RB: {fileID: 5481150008009859827}
 --- !u!114 &6308943047598151521

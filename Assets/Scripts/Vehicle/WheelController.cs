@@ -36,8 +36,15 @@ public class WheelController : MonoBehaviour
     public float idleRpm = 900f;
     public float redlineRpm = 7800f;
     public float engineRpmResponse = 9f;
+    [Tooltip("Скорость реакции дросселя. Сглаживание убирает мгновенный игрушечный рывок при нажатии газа")]
+    public float throttleResponse = 3.8f;
     public float engineBrakingTorque = 90f;
     [Range(0.5f, 1f)] public float drivetrainEfficiency = 0.88f;
+    [Tooltip("Короткое отключение тяги на отсечке не даёт колёсам раскручиваться выше диапазона текущей передачи")]
+    public float revLimiterCutDuration = 0.055f;
+    [Tooltip("Мягкое ограничение максимальной скорости автомобиля. Тяга плавно уменьшается перед этим значением")]
+    public float maximumVehicleSpeedKph = 195f;
+    public float topSpeedTorqueFadeRangeKph = 14f;
 
     [Header("Механическая коробка")]
     [Tooltip("Передаточные числа передач 1..N")]
@@ -92,6 +99,10 @@ public class WheelController : MonoBehaviour
     public float antiRollRear = 6100f;
     public float aerodynamicDownforce = 8f;
     public float aerodynamicDrag = 0.42f;
+    [Tooltip("Сопротивление шин и трансмиссии в ньютонах")]
+    public float rollingResistance = 125f;
+    [Tooltip("Дополнительное сопротивление качению на каждый м/с скорости")]
+    public float rollingResistancePerSpeed = 2.5f;
     [Tooltip("Смещение центра масс по высоте относительно центра колёс")]
     public float centerOfMassHeightOffset = -0.24f;
 
@@ -117,6 +128,8 @@ public class WheelController : MonoBehaviour
     private float driftEntryIntent;
     private float shiftTimer;
     private float clutch = 1f;
+    private float driveThrottle;
+    private float revLimiterTimer;
     private int pendingShift;
     private WheelAlignment frontLeft;
     private WheelAlignment frontRight;
@@ -343,23 +356,54 @@ public class WheelController : MonoBehaviour
 
     private void UpdateEngineAndDrivetrain()
     {
+        driveThrottle = Mathf.MoveTowards(
+            driveThrottle,
+            ThrottleInput,
+            Mathf.Max(0.1f, throttleResponse) * Time.fixedDeltaTime);
+
         float drivenWheelRpm = AverageDrivenWheelRpm();
         float ratio = GetActiveGearRatio();
         float coupledRpm = Mathf.Abs(drivenWheelRpm * ratio * finalDriveRatio);
-        float freeRevRpm = Mathf.Lerp(idleRpm, redlineRpm * 0.94f, ThrottleInput);
+        float freeRevRpm = Mathf.Lerp(idleRpm, redlineRpm * 0.94f, driveThrottle);
         float targetRpm = currentGear == 0 || clutch < 0.15f
             ? freeRevRpm
             : Mathf.Max(idleRpm, coupledRpm);
 
         EngineRpm = Mathf.Lerp(EngineRpm, targetRpm, 1f - Mathf.Exp(-engineRpmResponse * Time.fixedDeltaTime));
-        EngineRpm = Mathf.Clamp(EngineRpm, idleRpm, redlineRpm * 1.04f);
+        EngineRpm = Mathf.Clamp(EngineRpm, idleRpm, redlineRpm * 1.015f);
+
+        if (revLimiterTimer > 0f)
+            revLimiterTimer -= Time.fixedDeltaTime;
+
+        bool wheelSpeedAtLimiter = currentGear != 0
+            && clutch > 0.5f
+            && coupledRpm >= redlineRpm * 0.995f;
+        if (wheelSpeedAtLimiter && driveThrottle > 0.05f)
+            revLimiterTimer = Mathf.Max(revLimiterTimer, revLimiterCutDuration);
 
         float motorTorquePerWheel = 0f;
-        if (currentGear != 0 && clutch > 0f && EngineRpm < redlineRpm)
+        if (currentGear != 0
+            && clutch > 0f
+            && revLimiterTimer <= 0f
+            && coupledRpm < redlineRpm)
         {
-            float engineTorque = EvaluateEngineTorque(EngineRpm) * ThrottleInput;
+            float engineTorque = EvaluateEngineTorque(EngineRpm) * driveThrottle;
             motorTorquePerWheel = engineTorque * ratio * finalDriveRatio * drivetrainEfficiency * clutch * 0.5f;
             motorTorquePerWheel *= GetDriftPowerScale();
+
+            float absoluteForwardSpeed = Mathf.Abs(ForwardSpeedKph);
+            float speedFadeStart = Mathf.Max(0f, maximumVehicleSpeedKph - topSpeedTorqueFadeRangeKph);
+            float topSpeedFade = 1f - Mathf.InverseLerp(
+                speedFadeStart,
+                Mathf.Max(speedFadeStart + 1f, maximumVehicleSpeedKph),
+                absoluteForwardSpeed);
+            motorTorquePerWheel *= topSpeedFade;
+        }
+        else if (wheelSpeedAtLimiter && coupledRpm > redlineRpm * 1.005f)
+        {
+            // A selected gear mechanically resists wheel overspeed instead of
+            // letting the car coast far beyond that gear's usable RPM range.
+            motorTorquePerWheel = -Mathf.Sign(drivenWheelRpm) * engineBrakingTorque * 0.5f;
         }
 
         ApplyDrivenWheelTorque(rearLeft, motorTorquePerWheel);
@@ -624,5 +668,23 @@ public class WheelController : MonoBehaviour
 
         RB.AddForce(-transform.up * aerodynamicDownforce * speed * speed, ForceMode.Force);
         RB.AddForce(-RB.linearVelocity.normalized * aerodynamicDrag * speed * speed, ForceMode.Force);
+        if (HasGroundedWheel())
+        {
+            float rollingForce = rollingResistance + rollingResistancePerSpeed * speed;
+            RB.AddForce(-RB.linearVelocity.normalized * rollingForce, ForceMode.Force);
+        }
+    }
+
+    private bool HasGroundedWheel()
+    {
+        if (steerableWheels == null) return false;
+
+        foreach (WheelAlignment wheel in steerableWheels)
+        {
+            if (wheel != null && wheel.wheelCol != null && wheel.wheelCol.isGrounded)
+                return true;
+        }
+
+        return false;
     }
 }
