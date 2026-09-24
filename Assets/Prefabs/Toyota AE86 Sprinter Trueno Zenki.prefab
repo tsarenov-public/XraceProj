@@ -436,25 +436,26 @@ MonoBehaviour:
   counterSteerPrediction: 0.19
   wheelbase: 2.389
   trackWidth: 1.419
-  peakEngineTorque: 160
+  peakEngineTorque: 130
   peakTorqueRpm: 5200
   idleRpm: 900
   redlineRpm: 7600
   engineRpmResponse: 9
   throttleResponse: 3.2
   engineBrakingTorque: 75
+  gearOverspeedBrakingTorque: 500
   drivetrainEfficiency: 0.84
   revLimiterCutDuration: 0.06
   maximumVehicleSpeedKph: 190
   topSpeedTorqueFadeRangeKph: 16
   forwardGearRatios:
-  - 3.587
-  - 2.022
-  - 1.384
-  - 1
-  - 0.861
-  reverseGearRatio: 3.484
-  finalDriveRatio: 4.778
+  - 3.71
+  - 2.29
+  - 1.54
+  - 1.07
+  - 0.82
+  reverseGearRatio: 4.8
+  finalDriveRatio: 5.7
   shiftDuration: 0.22
   currentGear: 1
   frontBrakeTorque: 2400
@@ -528,6 +529,7 @@ MonoBehaviour:
   Engine: {fileID: 0}
   GearChangeSound: {fileID: 0}
   Controller: {fileID: 8543517112376264343}
+  gearChangeClip: {fileID: 8300000, guid: 51d3f215e07c15a41aab4038522df8d6, type: 3}
   idleClip: {fileID: 8300000, guid: fcbac167aadbc62458a5932e1663a958, type: 3}
   lowOnClip: {fileID: 8300000, guid: 7cc945fccaddf0c48a6fa20065d0d762, type: 3}
   mediumOnClip: {fileID: 8300000, guid: 52ee6439e2a5bf749832ea3e0c42d1c7, type: 3}

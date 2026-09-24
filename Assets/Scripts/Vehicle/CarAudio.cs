@@ -8,6 +8,8 @@ public class CarAudio : MonoBehaviour
     public AudioSource Engine;
     public AudioSource GearChangeSound;
     public WheelController Controller;
+    [Tooltip("Используется для переключения передач, если отдельный AudioSource не назначен")]
+    public AudioClip gearChangeClip;
 
     [Header("Слои двигателя")]
     public AudioClip idleClip;
@@ -53,8 +55,28 @@ public class CarAudio : MonoBehaviour
         if (Controller == null)
             Controller = GetComponent<WheelController>();
 
+        // The AE86 prefab has clips but no AudioSource. Create a dedicated
+        // engine source instead of accidentally picking a wheel or skid source.
         if (Engine == null)
-            Engine = GetComponentInChildren<AudioSource>();
+        {
+            Engine = gameObject.AddComponent<AudioSource>();
+            Engine.spatialBlend = 0.75f;
+            Engine.rolloffMode = AudioRolloffMode.Logarithmic;
+            Engine.minDistance = 7f;
+            Engine.maxDistance = 75f;
+            Engine.dopplerLevel = 0f;
+        }
+
+        if (GearChangeSound == null && gearChangeClip != null)
+        {
+            GearChangeSound = gameObject.AddComponent<AudioSource>();
+            GearChangeSound.clip = gearChangeClip;
+            GearChangeSound.spatialBlend = Engine.spatialBlend;
+            GearChangeSound.rolloffMode = Engine.rolloffMode;
+            GearChangeSound.minDistance = Engine.minDistance;
+            GearChangeSound.maxDistance = Engine.maxDistance;
+            GearChangeSound.dopplerLevel = 0f;
+        }
 
         lastGear = Controller == null ? 0 : Controller.CurrentGear;
         smoothedRpm = Controller == null ? 0f : Controller.EngineRpm;
@@ -152,6 +174,7 @@ public class CarAudio : MonoBehaviour
             return;
 
         AudioClip fallbackHighOn = highOnClip != null ? highOnClip : Engine.clip;
+        if (fallbackHighOn == null) fallbackHighOn = idleClip;
         idleSource = CreateLoopSource(idleClip);
         lowOnSource = CreateLoopSource(lowOnClip);
         mediumOnSource = CreateLoopSource(mediumOnClip);
