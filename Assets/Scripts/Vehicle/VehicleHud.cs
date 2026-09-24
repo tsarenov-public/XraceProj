@@ -5,7 +5,7 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(500)]
 public sealed class VehicleHud : MonoBehaviour
 {
-    private const float GaugeMaximumRpm = 10000f;
+    private const float DisplayMaximumSpeedKph = 200f;
 
     public WheelController controller;
 
@@ -20,8 +20,7 @@ public sealed class VehicleHud : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void InstallForActiveVehicle()
     {
-        WheelController[] controllers = FindObjectsByType<WheelController>();
-        foreach (WheelController candidate in controllers)
+        foreach (WheelController candidate in FindObjectsByType<WheelController>())
         {
             if (candidate == null || !candidate.isActiveAndEnabled)
                 continue;
@@ -52,15 +51,24 @@ public sealed class VehicleHud : MonoBehaviour
         speedText.text = Mathf.RoundToInt(Mathf.Max(0f, displayedSpeed)).ToString("0");
         gearText.text = controller.GearLabel;
         gearText.color = controller.CurrentGear < 0
-            ? new Color(1f, 0.3f, 0.24f)
+            ? new Color(1f, 0.3f, 0.22f)
             : controller.CurrentGear == 0
-                ? new Color(0.62f, 0.7f, 0.76f)
+                ? new Color(0.58f, 0.68f, 0.72f)
                 : Color.white;
-        rpmText.text = $"{Mathf.RoundToInt(displayedRpm):0000}  RPM";
 
-        float normalizedRpm = displayedRpm / GaugeMaximumRpm;
-        float normalizedRedline = controller.redlineRpm / GaugeMaximumRpm;
-        gauge.SetRpm(normalizedRpm, normalizedRedline);
+        rpmText.text = $"{displayedRpm / 1000f:0.0}";
+        float redlineAmount = displayedRpm / Mathf.Max(1f, controller.redlineRpm);
+        rpmText.color = redlineAmount >= 0.96f
+            ? new Color(1f, 0.22f, 0.14f)
+            : redlineAmount >= 0.82f
+                ? new Color(1f, 0.67f, 0.16f)
+                : new Color(0.9f, 0.94f, 0.96f);
+
+        float tachometerMaximum = Mathf.Max(1000f, Mathf.Ceil(controller.redlineRpm / 1000f) * 1000f);
+        gauge.SetTelemetry(
+            displayedSpeed / DisplayMaximumSpeedKph,
+            displayedRpm / tachometerMaximum,
+            controller.redlineRpm / tachometerMaximum);
     }
 
     private void OnDestroy()
@@ -76,7 +84,11 @@ public sealed class VehicleHud : MonoBehaviour
 
         Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-        GameObject canvasObject = new GameObject("Vehicle HUD", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
+        GameObject canvasObject = new GameObject(
+            "Vehicle HUD",
+            typeof(RectTransform),
+            typeof(Canvas),
+            typeof(CanvasScaler));
         canvas = canvasObject.GetComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 100;
@@ -87,67 +99,74 @@ public sealed class VehicleHud : MonoBehaviour
         scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         scaler.matchWidthOrHeight = 0.55f;
 
-        GameObject gaugeObject = new GameObject("Speedometer", typeof(RectTransform), typeof(SpeedometerGaugeGraphic));
+        GameObject gaugeObject = new GameObject(
+            "Beam Style Speedometer",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(SpeedometerGaugeGraphic));
         gaugeObject.transform.SetParent(canvasObject.transform, false);
         RectTransform gaugeRect = gaugeObject.GetComponent<RectTransform>();
         gaugeRect.anchorMin = new Vector2(1f, 0f);
         gaugeRect.anchorMax = new Vector2(1f, 0f);
         gaugeRect.pivot = new Vector2(1f, 0f);
-        gaugeRect.anchoredPosition = new Vector2(-32f, 24f);
-        gaugeRect.sizeDelta = new Vector2(330f, 300f);
+        gaugeRect.anchoredPosition = new Vector2(-34f, 26f);
+        gaugeRect.sizeDelta = new Vector2(380f, 380f);
+
         gauge = gaugeObject.GetComponent<SpeedometerGaugeGraphic>();
         gauge.raycastTarget = false;
 
-        CreateRpmLabels(gaugeRect, font);
+        CreateSpeedLabels(gaugeRect, font);
 
-        gearText = CreateText(gaugeRect, "Gear", font, 104, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(gearText.rectTransform, new Vector2(0f, 16f), new Vector2(130f, 125f));
+        Text gearCaption = CreateText(gaugeRect, "Gear Caption", font, 11, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(gearCaption.rectTransform, new Vector2(0f, 91f), new Vector2(72f, 18f));
+        gearCaption.text = "GEAR";
+        gearCaption.color = new Color(0.48f, 0.58f, 0.62f);
+
+        gearText = CreateText(gaugeRect, "Gear", font, 48, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(gearText.rectTransform, new Vector2(0f, 62f), new Vector2(92f, 62f));
         gearText.text = "1";
-        AddOutline(gearText, new Color(0f, 0f, 0f, 0.85f), new Vector2(3f, -3f));
+        AddShadow(gearText, new Color(0f, 0f, 0f, 0.85f), new Vector2(2f, -2f));
 
-        speedText = CreateText(gaugeRect, "Speed", font, 58, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(speedText.rectTransform, new Vector2(73f, -88f), new Vector2(135f, 70f));
+        speedText = CreateText(gaugeRect, "Speed", font, 82, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(speedText.rectTransform, new Vector2(0f, -8f), new Vector2(210f, 96f));
         speedText.text = "0";
-        AddOutline(speedText, new Color(0f, 0f, 0f, 0.75f), new Vector2(2f, -2f));
+        AddShadow(speedText, new Color(0f, 0f, 0f, 0.9f), new Vector2(3f, -3f));
 
-        Text unitText = CreateText(gaugeRect, "Units", font, 13, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(unitText.rectTransform, new Vector2(73f, -124f), new Vector2(90f, 22f));
-        unitText.text = "KM/H";
-        unitText.color = new Color(0.72f, 0.76f, 0.78f);
+        Text speedUnit = CreateText(gaugeRect, "Speed Unit", font, 14, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(speedUnit.rectTransform, new Vector2(0f, -57f), new Vector2(90f, 24f));
+        speedUnit.text = "KM/H";
+        speedUnit.color = new Color(0.56f, 0.66f, 0.7f);
 
-        rpmText = CreateText(gaugeRect, "Rpm", font, 15, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(rpmText.rectTransform, new Vector2(0f, -51f), new Vector2(150f, 26f));
-        rpmText.text = "0900  RPM";
-        rpmText.color = new Color(0.78f, 0.82f, 0.84f);
+        rpmText = CreateText(gaugeRect, "Rpm", font, 25, FontStyle.Bold, TextAnchor.MiddleRight);
+        SetRect(rpmText.rectTransform, new Vector2(-35f, -101f), new Vector2(64f, 32f));
+        rpmText.text = "0.9";
 
-        Text rpmScaleText = CreateText(gaugeRect, "Rpm Scale", font, 10, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(rpmScaleText.rectTransform, new Vector2(0f, -69f), new Vector2(100f, 18f));
-        rpmScaleText.text = "RPM ×1000";
-        rpmScaleText.color = new Color(0.48f, 0.52f, 0.54f);
+        Text rpmUnit = CreateText(gaugeRect, "Rpm Unit", font, 11, FontStyle.Bold, TextAnchor.MiddleLeft);
+        SetRect(rpmUnit.rectTransform, new Vector2(42f, -101f), new Vector2(90f, 28f));
+        rpmUnit.text = "×1000 RPM";
+        rpmUnit.color = new Color(0.48f, 0.58f, 0.62f);
 
-        Text gameMark = CreateText(gaugeRect, "Game Mark", font, 17, FontStyle.BoldAndItalic, TextAnchor.MiddleCenter);
-        SetRect(gameMark.rectTransform, new Vector2(132f, -110f), new Vector2(58f, 25f));
-        gameMark.text = "XR";
-        gameMark.color = new Color(0.94f, 0.08f, 0.28f);
+        Text brand = CreateText(gaugeRect, "Brand", font, 10, FontStyle.Bold, TextAnchor.MiddleCenter);
+        SetRect(brand.rectTransform, new Vector2(0f, -134f), new Vector2(100f, 18f));
+        brand.text = "XRACE";
+        brand.color = new Color(0.18f, 0.68f, 0.86f, 0.85f);
     }
 
-    private static void CreateRpmLabels(RectTransform parent, Font font)
+    private static void CreateSpeedLabels(RectTransform parent, Font font)
     {
-        Vector2 center = new Vector2(0f, -7f);
-        const float labelRadius = 104f;
-        for (int value = 0; value <= 10; value++)
+        Vector2 center = Vector2.zero;
+        const float labelRadius = 133f;
+
+        for (int speed = 0; speed <= (int)DisplayMaximumSpeedKph; speed += 40)
         {
-            float t = value / 10f;
+            float t = speed / DisplayMaximumSpeedKph;
             float angle = Mathf.Lerp(SpeedometerGaugeGraphic.StartAngle, SpeedometerGaugeGraphic.EndAngle, t);
-            float radians = angle * Mathf.Deg2Rad;
-            Vector2 position = center + new Vector2(Mathf.Cos(radians), Mathf.Sin(radians)) * labelRadius;
-            Text label = CreateText(parent, "RPM " + value, font, 13, FontStyle.Bold, TextAnchor.MiddleCenter);
-            SetRect(label.rectTransform, position, new Vector2(28f, 22f));
-            label.text = value.ToString();
-            label.color = t >= 0.78f
-                ? new Color(1f, 0.25f, 0.2f)
-                : new Color(0.92f, 0.94f, 0.95f);
-            AddOutline(label, new Color(0f, 0f, 0f, 0.8f), new Vector2(1f, -1f));
+            Vector2 position = center + SpeedometerGaugeGraphic.Direction(angle) * labelRadius;
+            Text label = CreateText(parent, "Speed " + speed, font, 12, FontStyle.Bold, TextAnchor.MiddleCenter);
+            SetRect(label.rectTransform, position, new Vector2(44f, 22f));
+            label.text = speed.ToString();
+            label.color = new Color(0.68f, 0.75f, 0.78f);
+            AddShadow(label, new Color(0f, 0f, 0f, 0.75f), new Vector2(1f, -1f));
         }
     }
 
@@ -182,82 +201,126 @@ public sealed class VehicleHud : MonoBehaviour
         rect.sizeDelta = size;
     }
 
-    private static void AddOutline(Text text, Color color, Vector2 distance)
+    private static void AddShadow(Text text, Color color, Vector2 distance)
     {
-        Outline outline = text.gameObject.AddComponent<Outline>();
-        outline.effectColor = color;
-        outline.effectDistance = distance;
-        outline.useGraphicAlpha = true;
+        Shadow shadow = text.gameObject.AddComponent<Shadow>();
+        shadow.effectColor = color;
+        shadow.effectDistance = distance;
+        shadow.useGraphicAlpha = true;
     }
 }
 
 internal sealed class SpeedometerGaugeGraphic : MaskableGraphic
 {
-    private const int ArcSegments = 64;
-    public const float StartAngle = 250f;
-    public const float EndAngle = -20f;
+    private const int ArcSegments = 72;
+    private const int RpmSegments = 30;
 
+    public const float StartAngle = 220f;
+    public const float EndAngle = -40f;
+
+    private float speed01;
     private float rpm01;
     private float redline01 = 0.78f;
 
-    public void SetRpm(float value, float redline)
+    public void SetTelemetry(float speed, float rpm, float redline)
     {
-        float clamped = Mathf.Clamp01(value);
-        float clampedRedline = Mathf.Clamp01(redline);
-        if (Mathf.Abs(rpm01 - clamped) < 0.001f && Mathf.Abs(redline01 - clampedRedline) < 0.001f)
+        float nextSpeed = Mathf.Clamp01(speed);
+        float nextRpm = Mathf.Clamp01(rpm);
+        float nextRedline = Mathf.Clamp01(redline);
+        if (Mathf.Abs(speed01 - nextSpeed) < 0.001f
+            && Mathf.Abs(rpm01 - nextRpm) < 0.001f
+            && Mathf.Abs(redline01 - nextRedline) < 0.001f)
             return;
 
-        rpm01 = clamped;
-        redline01 = clampedRedline;
+        speed01 = nextSpeed;
+        rpm01 = nextRpm;
+        redline01 = nextRedline;
         SetVerticesDirty();
     }
 
-    protected override void OnPopulateMesh(VertexHelper vertexHelper)
+    protected override void OnPopulateMesh(VertexHelper helper)
     {
-        vertexHelper.Clear();
+        helper.Clear();
 
         Rect rect = rectTransform.rect;
-        Vector2 center = rect.center + new Vector2(0f, -7f);
+        Vector2 center = rect.center;
         float radius = Mathf.Min(rect.width, rect.height) * 0.46f;
 
-        AddDisc(vertexHelper, center, radius, new Color32(5, 8, 12, 205));
-        AddArc(vertexHelper, center, radius - 5f, 12f, 0f, 1f, new Color32(56, 60, 64, 225));
-        float normalRpm = Mathf.Min(rpm01, redline01);
-        if (normalRpm > 0f)
-            AddArc(vertexHelper, center, radius - 5f, 8f, 0f, normalRpm, new Color32(238, 242, 244, 255));
-        if (rpm01 > redline01)
-            AddArc(vertexHelper, center, radius - 5f, 8f, redline01, rpm01, new Color32(255, 49, 42, 255));
+        AddDisc(helper, center + new Vector2(4f, -6f), radius + 2f, new Color32(0, 0, 0, 90));
+        AddDisc(helper, center, radius, new Color32(5, 9, 13, 226));
+        AddDisc(helper, center, radius - 8f, new Color32(10, 15, 20, 242));
+        AddArc(helper, center, radius - 3f, 2f, 0f, 1f, new Color32(105, 126, 135, 110));
 
-        for (int i = 0; i <= 16; i++)
-        {
-            float t = i / 16f;
-            bool major = i % 2 == 0;
-            Color32 tickColor = t >= redline01
-                ? new Color32(255, 74, 58, 245)
-                : new Color32(196, 213, 220, major ? (byte)235 : (byte)130);
-            AddRadialLine(
-                vertexHelper,
-                center,
-                radius - (major ? 28f : 23f),
-                radius - 15f,
-                Mathf.Lerp(StartAngle, EndAngle, t),
-                major ? 3f : 1.5f,
-                tickColor);
-        }
+        DrawSpeedScale(helper, center, radius);
+        DrawRpmSegments(helper, center, radius - 29f);
+        DrawSpeedNeedle(helper, center, radius);
 
-        float needleAngle = Mathf.Lerp(StartAngle, EndAngle, rpm01);
-        Vector2 direction = Direction(needleAngle);
-        Vector2 side = new Vector2(-direction.y, direction.x);
-        AddTriangle(
-            vertexHelper,
-            center - direction * 13f + side * 5f,
-            center - direction * 13f - side * 5f,
-            center + direction * (radius - 35f),
-            new Color32(255, 88, 62, 255));
-        AddDisc(vertexHelper, center, 8f, new Color32(225, 235, 238, 255), 20);
+        AddDisc(helper, center, 15f, new Color32(12, 19, 24, 255), 24);
+        AddDisc(helper, center, 7f, new Color32(238, 245, 247, 255), 20);
+        AddDisc(helper, center, 3f, new Color32(31, 173, 220, 255), 16);
     }
 
-    private static void AddDisc(VertexHelper helper, Vector2 center, float radius, Color32 color, int segments = 64)
+    private void DrawSpeedScale(VertexHelper helper, Vector2 center, float radius)
+    {
+        AddArc(helper, center, radius - 13f, 5f, 0f, 1f, new Color32(43, 55, 62, 235));
+        if (speed01 > 0f)
+            AddArc(helper, center, radius - 13f, 5f, 0f, speed01, new Color32(41, 181, 224, 255));
+
+        const int tickCount = 25;
+        for (int i = 0; i <= tickCount; i++)
+        {
+            float t = i / (float)tickCount;
+            bool major = i % 5 == 0;
+            AddRadialLine(
+                helper,
+                center,
+                radius - (major ? 31f : 25f),
+                radius - 18f,
+                Mathf.Lerp(StartAngle, EndAngle, t),
+                major ? 2.5f : 1.25f,
+                major ? new Color32(218, 229, 232, 230) : new Color32(126, 143, 150, 145));
+        }
+    }
+
+    private void DrawRpmSegments(VertexHelper helper, Vector2 center, float radius)
+    {
+        for (int i = 0; i < RpmSegments; i++)
+        {
+            float from = i / (float)RpmSegments + 0.004f;
+            float to = (i + 1) / (float)RpmSegments - 0.004f;
+            float segmentCenter = (from + to) * 0.5f;
+            bool active = segmentCenter <= rpm01;
+            bool redline = segmentCenter >= redline01;
+
+            Color32 color;
+            if (!active)
+                color = redline ? new Color32(76, 32, 29, 150) : new Color32(36, 48, 54, 180);
+            else if (redline)
+                color = new Color32(255, 58, 43, 255);
+            else if (segmentCenter >= redline01 - 0.16f)
+                color = new Color32(255, 172, 42, 255);
+            else
+                color = new Color32(222, 235, 238, 255);
+
+            AddArc(helper, center, radius, 9f, from, to, color);
+        }
+    }
+
+    private void DrawSpeedNeedle(VertexHelper helper, Vector2 center, float radius)
+    {
+        float angle = Mathf.Lerp(StartAngle, EndAngle, speed01);
+        Vector2 direction = Direction(angle);
+        Vector2 side = new Vector2(-direction.y, direction.x);
+        AddQuad(
+            helper,
+            center - direction * 18f - side * 3f,
+            center - direction * 18f + side * 3f,
+            center + direction * (radius - 38f) + side * 1.25f,
+            center + direction * (radius - 38f) - side * 1.25f,
+            new Color32(242, 248, 250, 255));
+    }
+
+    private static void AddDisc(VertexHelper helper, Vector2 center, float radius, Color32 color, int segments = 72)
     {
         int centerIndex = AddVertex(helper, center, color);
         for (int i = 0; i < segments; i++)
@@ -279,11 +342,11 @@ internal sealed class SpeedometerGaugeGraphic : MaskableGraphic
         float to,
         Color32 color)
     {
-        int segmentCount = Mathf.Max(1, Mathf.CeilToInt(ArcSegments * Mathf.Max(0.001f, to - from)));
-        for (int i = 0; i < segmentCount; i++)
+        int count = Mathf.Max(1, Mathf.CeilToInt(ArcSegments * Mathf.Max(0.001f, to - from)));
+        for (int i = 0; i < count; i++)
         {
-            float t0 = Mathf.Lerp(from, to, i / (float)segmentCount);
-            float t1 = Mathf.Lerp(from, to, (i + 1) / (float)segmentCount);
+            float t0 = Mathf.Lerp(from, to, i / (float)count);
+            float t1 = Mathf.Lerp(from, to, (i + 1) / (float)count);
             Vector2 d0 = Direction(Mathf.Lerp(StartAngle, EndAngle, t0));
             Vector2 d1 = Direction(Mathf.Lerp(StartAngle, EndAngle, t1));
             AddQuad(
@@ -327,15 +390,6 @@ internal sealed class SpeedometerGaugeGraphic : MaskableGraphic
         helper.AddTriangle(index, index + 2, index + 3);
     }
 
-    private static void AddTriangle(VertexHelper helper, Vector2 a, Vector2 b, Vector2 c, Color32 color)
-    {
-        int index = helper.currentVertCount;
-        AddVertex(helper, a, color);
-        AddVertex(helper, b, color);
-        AddVertex(helper, c, color);
-        helper.AddTriangle(index, index + 1, index + 2);
-    }
-
     private static int AddVertex(VertexHelper helper, Vector2 position, Color32 color)
     {
         UIVertex vertex = UIVertex.simpleVert;
@@ -345,7 +399,7 @@ internal sealed class SpeedometerGaugeGraphic : MaskableGraphic
         return helper.currentVertCount - 1;
     }
 
-    private static Vector2 Direction(float degrees)
+    public static Vector2 Direction(float degrees)
     {
         float radians = degrees * Mathf.Deg2Rad;
         return new Vector2(Mathf.Cos(radians), Mathf.Sin(radians));
