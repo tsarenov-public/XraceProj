@@ -42,8 +42,6 @@ public class WheelController : MonoBehaviour
     [Tooltip("Максимальный тормозящий момент трансмиссии при превышении скорости выбранной передачи")]
     public float gearOverspeedBrakingTorque = 500f;
     [Range(0.5f, 1f)] public float drivetrainEfficiency = 0.88f;
-    [Tooltip("Короткое отключение тяги на отсечке не даёт колёсам раскручиваться выше диапазона текущей передачи")]
-    public float revLimiterCutDuration = 0.055f;
     [Tooltip("Мягкое ограничение максимальной скорости автомобиля. Тяга плавно уменьшается перед этим значением")]
     public float maximumVehicleSpeedKph = 195f;
     public float topSpeedTorqueFadeRangeKph = 14f;
@@ -71,6 +69,8 @@ public class WheelController : MonoBehaviour
     public float driftEntryRearStiffness = 0.69f;
     public float driftEntryCompleteAngle = 18f;
     public float handbrakeRearStiffness = 0.36f;
+    [Tooltip("Продольное сцепление задних шин в заносе; меньшее значение снижает потерю скорости от скольжения")]
+    public float slidingRearForwardStiffness = 0.88f;
     public float gripChangeSpeed = 5f;
     [Tooltip("Медленный возврат сцепления не даёт машине резко выстреливать из заноса")]
     public float gripRecoverySpeed = 1.45f;
@@ -154,7 +154,6 @@ public class WheelController : MonoBehaviour
     private float shiftTimer;
     private float clutch = 1f;
     private float driveThrottle;
-    private float revLimiterTimer;
     private int pendingShift;
     private WheelAlignment frontLeft;
     private WheelAlignment frontRight;
@@ -405,24 +404,19 @@ public class WheelController : MonoBehaviour
         EngineRpm = Mathf.Lerp(EngineRpm, targetRpm, 1f - Mathf.Exp(-engineRpmResponse * Time.fixedDeltaTime));
         EngineRpm = Mathf.Clamp(EngineRpm, idleRpm, redlineRpm * 1.015f);
 
-        if (revLimiterTimer > 0f)
-            revLimiterTimer -= Time.fixedDeltaTime;
-
-        bool wheelSpeedAtLimiter = currentGear != 0
-            && clutch > 0.5f
-            && effectiveCoupledRpm >= redlineRpm * 0.995f;
-        if (wheelSpeedAtLimiter && driveThrottle > 0.05f)
-            revLimiterTimer = Mathf.Max(revLimiterTimer, revLimiterCutDuration);
-
         float motorTorquePerWheel = 0f;
         if (currentGear != 0
             && clutch > 0f
-            && revLimiterTimer <= 0f
-            && effectiveCoupledRpm < redlineRpm)
+            && roadCoupledRpm < redlineRpm)
         {
             float engineTorque = EvaluateEngineTorque(EngineRpm) * driveThrottle;
             motorTorquePerWheel = engineTorque * ratio * finalDriveRatio * drivetrainEfficiency * clutch * 0.5f;
             motorTorquePerWheel *= GetDriftPowerScale();
+
+            // Spinning tyres can hit redline well below the gear's road-speed limit.
+            // Reduce torque progressively instead of cutting it and killing the slide.
+            float wheelLimiter = Mathf.InverseLerp(redlineRpm * 0.98f, redlineRpm * 1.12f, coupledRpm);
+            motorTorquePerWheel *= Mathf.Lerp(1f, 0.55f, wheelLimiter);
 
             // Let each gear run to its redline, then smoothly remove drive torque.
             // Vehicle speed provides a second limit when driven wheels slip.
@@ -440,10 +434,6 @@ public class WheelController : MonoBehaviour
                 Mathf.Max(speedFadeStart + 1f, maximumVehicleSpeedKph),
                 absoluteForwardSpeed);
             motorTorquePerWheel *= topSpeedFade;
-        }
-        else if (wheelSpeedAtLimiter && effectiveCoupledRpm > redlineRpm * 1.005f)
-        {
-            motorTorquePerWheel = -Mathf.Sign(drivenWheelRpm) * engineBrakingTorque * 0.5f;
         }
 
         if (gearSpeedLimitKph > 0f && clutch > 0.5f && longitudinalSpeedKph > gearSpeedLimitKph)
@@ -604,7 +594,8 @@ public class WheelController : MonoBehaviour
         SetSidewaysStiffness(frontRight, frontSidewaysStiffness);
         SetSidewaysStiffness(rearLeft, targetRearStiffness);
         SetSidewaysStiffness(rearRight, targetRearStiffness);
-        SetRearForwardGrip(IsHandbraking ? 0.72f : 1.24f);
+        float rearForwardGrip = Mathf.Lerp(1.24f, slidingRearForwardStiffness, rearGripBlend);
+        SetRearForwardGrip(IsHandbraking ? 0.72f : rearForwardGrip);
 
         bool steeringIntoSlide = Mathf.Abs(DriftAngle) < 2f
             || Mathf.Sign(smoothedSteerInput) == -Mathf.Sign(DriftAngle);

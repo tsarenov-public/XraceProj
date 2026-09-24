@@ -1743,15 +1743,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1975153726052898245, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       propertyPath: standHeight
-      value: 1.35
+      value: 1.2
       objectReference: {fileID: 0}
     - target: {fileID: 1975153726052898245, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       propertyPath: standDistance
-      value: 5
+      value: 4.2
       objectReference: {fileID: 0}
     - target: {fileID: 1975153726052898245, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       propertyPath: highSpeedDistance
-      value: 5.2
+      value: 4.45
       objectReference: {fileID: 0}
     - target: {fileID: 4419319760505289164, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       propertyPath: m_Name

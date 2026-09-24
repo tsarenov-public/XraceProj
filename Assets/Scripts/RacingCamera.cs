@@ -11,13 +11,13 @@ public class RacingCamera : MonoBehaviour
     public Vector3 targetOffset = new Vector3(0f, 1.15f, 0.15f);
 
     [Header("Chase position")]
-    [Min(0.1f)] public float standDistance = 4.8f;
-    [Min(0.1f)] public float highSpeedDistance = 5.35f;
+    [Min(0.1f)] public float standDistance = 4.2f;
+    [Min(0.1f)] public float highSpeedDistance = 4.45f;
     [Min(0f)] public float standHeight = 1.2f;
     [Min(0f)] public float highSpeedHeight = 1.38f;
     [Min(1f)] public float fullDistanceSpeedKph = 160f;
     [Range(0.03f, 0.6f)] public float positionSmoothTime = 0.14f;
-    [Range(0f, 1f)] public float accelerationDistance = 0.1f;
+    [Range(0f, 1f)] public float accelerationDistance = 0.05f;
     [Min(1f)] public float teleportDistance = 18f;
 
     [Header("Direction and drift")]
@@ -32,7 +32,7 @@ public class RacingCamera : MonoBehaviour
 
     [Header("Field of view")]
     [Range(30f, 110f)] public float minFov = 62f;
-    [Range(30f, 110f)] public float maxFov = 78f;
+    [Range(30f, 110f)] public float maxFov = 70f;
     [Min(1f)] public float fullFovSpeedKph = 180f;
     [Range(0f, 12f)] public float driftFovBonus = 3.5f;
     [Min(0.1f)] public float fovSharpness = 3.5f;
