@@ -425,10 +425,17 @@ MonoBehaviour:
   shiftDownKey: 113
   shiftUpKey: 101
   steeringInputSpeed: 5.5
+  steeringInitialInputSpeed: 1.25
+  steeringAccelerationTime: 0.45
+  counterSteerInputSpeed: 9
   steeringReturnSpeed: 7.5
   lowSpeedSteerAngle: 43
   highSpeedSteerAngle: 13
   fullSteerFadeSpeedKph: 150
+  steeringResponseExponent: 1.75
+  steeringSpeedSensitivity: 0.65
+  driftFullSteerAngle: 43
+  driftSteeringResponseAngle: 18
   counterSteerAssist: 0.86
   counterSteerStartAngle: 4
   counterSteerMaxAngle: 34
