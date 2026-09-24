@@ -1761,6 +1761,10 @@ PrefabInstance:
       propertyPath: headlightLens
       value: 
       objectReference: {fileID: 2100000, guid: b4b177a332af24974b0451c0e9d2e521, type: 2}
+    - target: {fileID: 7318882795464026694, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
+      propertyPath: roadSurface
+      value:
+      objectReference: {fileID: 355688899}
     - target: {fileID: 8586740989592926902, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       propertyPath: 'm_Materials.Array.data[1]'
       value: 

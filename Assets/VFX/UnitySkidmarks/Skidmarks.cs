@@ -11,14 +11,22 @@ public class Skidmarks : MonoBehaviour {
 	[SerializeField]
 	Material skidmarksMaterial; // Material for the skidmarks to use
 
+	[Header("Road surface projection")]
+	[Tooltip("Collider of the road mesh used as the authoritative skidmark surface.")]
+	[SerializeField] Collider roadSurface;
+	[Tooltip("Fallback scene object name when the road collider is not assigned directly.")]
+	[SerializeField] string roadSurfaceName = "Touge_01";
+	[Tooltip("Small lift above the road mesh that prevents depth fighting.")]
+	[SerializeField, Min(0f)] float surfaceOffset = 0.018f;
+	[Tooltip("Height above the wheel contact point from which the road is sampled.")]
+	[SerializeField, Min(0.1f)] float projectionStartHeight = 0.75f;
+	[Tooltip("How far below the sample origin the road mesh may be.")]
+	[SerializeField, Min(0.1f)] float projectionDistance = 1.5f;
+
 	// END INSPECTOR SETTINGS
 
 	const int MAX_MARKS = 2048; // Max number of marks total for everyone together
 	const float MARK_WIDTH = 0.35f; // Width of the skidmarks. Should match the width of the wheels
-	// EasyRoads road meshes can sit a few centimetres above their generated
-	// colliders. A larger normal offset keeps marks visible above the asphalt
-	// instead of being hidden by depth fighting or buried under the road mesh.
-	const float GROUND_OFFSET = 0.06f;
 	const float MIN_DISTANCE = 0.25f; // Distance between skid texture sections in metres. Bigger = better performance, less smooth
 	const float MIN_SQR_DISTANCE = MIN_DISTANCE * MIN_DISTANCE;
 	const float MAX_OPACITY = 1.0f; // Max skidmark opacity
@@ -49,6 +57,7 @@ public class Skidmarks : MonoBehaviour {
 
 	bool meshUpdated;
 	bool haveSetBounds;
+	bool missingRoadWarningShown;
 
 	Color32 black = Color.black;
 
@@ -65,6 +74,8 @@ public class Skidmarks : MonoBehaviour {
 			transform.position = Vector3.zero;
 			transform.rotation = Quaternion.identity;
 		}
+
+		ResolveRoadSurface();
 	}
 
 	protected void Start() {
@@ -149,11 +160,12 @@ public class Skidmarks : MonoBehaviour {
 
 	// Function called by the wheel that's skidding. Sets the colour and intensity of the skidmark section.
 	public int AddSkidMark(Vector3 pos, Vector3 normal, Color32 colour, int lastIndex) {
-		if (colour.a == 0) return -1; // No point in continuing if it's invisible	
+		if (colour.a == 0) return -1; // No point in continuing if it's invisible
 
 		MarkSection lastSection = null;
 		Vector3 distAndDirection = Vector3.zero;
-		Vector3 newPos = pos + normal * GROUND_OFFSET;
+		ProjectOntoRoad(ref pos, ref normal);
+		Vector3 newPos = pos + normal * surfaceOffset;
 		if (lastIndex != -1) {
 			lastSection = skidmarks[lastIndex];
 			distAndDirection = newPos - lastSection.Pos;
@@ -202,6 +214,36 @@ public class Skidmarks : MonoBehaviour {
 		markIndex = ++markIndex % MAX_MARKS;
 
 		return curIndex;
+	}
+
+	void ResolveRoadSurface() {
+		if (roadSurface != null || string.IsNullOrWhiteSpace(roadSurfaceName)) return;
+
+		GameObject roadObject = GameObject.Find(roadSurfaceName);
+		if (roadObject != null) {
+			roadSurface = roadObject.GetComponent<Collider>();
+		}
+
+		if (roadSurface == null && !missingRoadWarningShown) {
+			Debug.LogWarning(
+				$"Skidmarks could not find road collider '{roadSurfaceName}'. " +
+				"Marks will use WheelCollider contact points instead.",
+				this);
+			missingRoadWarningShown = true;
+		}
+	}
+
+	void ProjectOntoRoad(ref Vector3 pos, ref Vector3 normal) {
+		if (roadSurface == null) ResolveRoadSurface();
+		if (roadSurface == null) return;
+
+		float startHeight = Mathf.Max(0.1f, projectionStartHeight);
+		float rayDistance = Mathf.Max(startHeight, projectionDistance);
+		Ray projectionRay = new Ray(pos + Vector3.up * startHeight, Vector3.down);
+		if (!roadSurface.Raycast(projectionRay, out RaycastHit roadHit, rayDistance)) return;
+
+		pos = roadHit.point;
+		normal = roadHit.normal.normalized;
 	}
 
 	// #### PROTECTED/PRIVATE METHODS ####
