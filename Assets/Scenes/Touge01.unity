@@ -1769,9 +1769,6 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4419319760505289164, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 2144801704}
     - targetCorrespondingSourceObject: {fileID: 4019264724355220136, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1879735478}
@@ -1988,28 +1985,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 5f14942c0b21d4d23ad219ecd4217214, type: 3}
   m_PrefabInstance: {fileID: 1701455726}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &2144801695 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4419319760505289164, guid: 0beb955d73f5049468bc4ac3e17ed0f8, type: 3}
-  m_PrefabInstance: {fileID: 1790603829}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2144801704
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2144801695}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d2684a05804f4599875a761909f9c8a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BrakeLightController
-  taillightLens: {fileID: 2100000, guid: 186234cda57584eed9da8eeca9a1a405, type: 2}
-  headlights: {fileID: 0}
-  wheels: {fileID: 0}
-  tailColor: {r: 2, g: 0.06, b: 0.06, a: 2}
-  brakeColor: {r: 4, g: 0.04, b: 0.04, a: 4}
 --- !u!1 &3836686261012252196
 GameObject:
   m_ObjectHideFlags: 0
