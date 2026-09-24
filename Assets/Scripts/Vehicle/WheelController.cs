@@ -12,14 +12,7 @@ public class WheelController : MonoBehaviour
     public KeyCode handbrakeKey = KeyCode.Space;
     public KeyCode shiftDownKey = KeyCode.Q;
     public KeyCode shiftUpKey = KeyCode.E;
-    [Tooltip("Максимальная скорость набора руля после удержания кнопки")]
     public float steeringInputSpeed = 5.5f;
-    [Tooltip("Начальная скорость руля. Низкое значение делает короткие нажатия точными")]
-    public float steeringInitialInputSpeed = 1.25f;
-    [Tooltip("Время, за которое удерживаемая кнопка выводит руль на полную скорость")]
-    public float steeringAccelerationTime = 0.45f;
-    [Tooltip("Скорость перекладки руля в противоположную сторону и в заносе")]
-    public float counterSteerInputSpeed = 9f;
     public float steeringReturnSpeed = 7.5f;
 
     [Header("Рулевое управление")]
@@ -27,14 +20,6 @@ public class WheelController : MonoBehaviour
     public float highSpeedSteerAngle = 11f;
     [Tooltip("Скорость в км/ч, на которой используется минимальный угол руля")]
     public float fullSteerFadeSpeedKph = 150f;
-    [Tooltip("Нелинейность руля на скорости. Больше — точнее небольшие корректировки")]
-    [Range(1f, 2.5f)] public float steeringResponseExponent = 1.75f;
-    [Tooltip("Насколько быстро уменьшается максимальный угол руля с ростом скорости")]
-    [Range(0.35f, 1f)] public float steeringSpeedSensitivity = 0.65f;
-    [Tooltip("Полный доступный выворот колёс в управляемом заносе")]
-    public float driftFullSteerAngle = 43f;
-    [Tooltip("Угол заноса, при котором руль полностью переходит в быстрый drift-режим")]
-    public float driftSteeringResponseAngle = 18f;
     [Range(0f, 1f)] public float counterSteerAssist = 0.86f;
     public float counterSteerStartAngle = 4f;
     public float counterSteerMaxAngle = 34f;
@@ -161,8 +146,6 @@ public class WheelController : MonoBehaviour
 
     private float rawSteerInput;
     private float smoothedSteerInput;
-    private float steerHoldTime;
-    private int lastSteerDirection;
     private float rearGripBlend;
     private float driftEntryIntent;
     private float shiftTimer;
@@ -331,32 +314,19 @@ public class WheelController : MonoBehaviour
 
     private void UpdateSteering()
     {
+        float inputRate = Mathf.Abs(rawSteerInput) > 0.01f ? steeringInputSpeed : steeringReturnSpeed;
+        smoothedSteerInput = Mathf.MoveTowards(smoothedSteerInput, rawSteerInput, inputRate * Time.fixedDeltaTime);
+        Horizontal = smoothedSteerInput;
+
         Vector3 localVelocity = transform.InverseTransformDirection(RB.linearVelocity);
         float speedKph = RB.linearVelocity.magnitude * 3.6f;
         DriftAngle = speedKph > 3f
             ? Mathf.Atan2(localVelocity.x, Mathf.Max(1f, Mathf.Abs(localVelocity.z))) * Mathf.Rad2Deg
             : 0f;
 
-        float driftResponseStart = counterSteerStartAngle + 2f;
-        float driftControlBlend = Mathf.InverseLerp(
-            driftResponseStart,
-            Mathf.Max(driftResponseStart + 0.1f, driftSteeringResponseAngle),
-            Mathf.Abs(DriftAngle));
-        if (IsHandbraking && speedKph > 8f) driftControlBlend = 1f;
-
-        UpdateSteeringInput(speedKph, driftControlBlend);
-
-        float speedPrecision = Mathf.InverseLerp(18f, 100f, speedKph);
-        float responseExponent = Mathf.Lerp(1.25f, steeringResponseExponent, speedPrecision);
-        responseExponent = Mathf.Lerp(responseExponent, 1f, driftControlBlend);
-        Horizontal = Mathf.Sign(smoothedSteerInput)
-            * Mathf.Pow(Mathf.Abs(smoothedSteerInput), responseExponent);
-
-        float linearSpeedFactor = Mathf.Clamp01(speedKph / Mathf.Max(1f, fullSteerFadeSpeedKph));
-        float speedFactor = Mathf.Pow(linearSpeedFactor, steeringSpeedSensitivity);
+        float speedFactor = Mathf.Clamp01(speedKph / Mathf.Max(1f, fullSteerFadeSpeedKph));
         float maximumSteer = Mathf.Lerp(lowSpeedSteerAngle, highSpeedSteerAngle, speedFactor);
-        maximumSteer = Mathf.Lerp(maximumSteer, Mathf.Max(maximumSteer, driftFullSteerAngle), driftControlBlend);
-        float requestedAngle = Horizontal * maximumSteer;
+        float requestedAngle = smoothedSteerInput * maximumSteer;
 
         if (speedKph > driftMinSpeedKph && Mathf.Abs(DriftAngle) > counterSteerStartAngle)
         {
@@ -370,49 +340,6 @@ public class WheelController : MonoBehaviour
 
         requestedAngle = Mathf.Clamp(requestedAngle, -maximumSteer, maximumSteer);
         SetAckermannSteering(requestedAngle);
-    }
-
-    private void UpdateSteeringInput(float speedKph, float driftControlBlend)
-    {
-        const float inputDeadZone = 0.01f;
-        int inputDirection = rawSteerInput > inputDeadZone ? 1 : rawSteerInput < -inputDeadZone ? -1 : 0;
-
-        if (inputDirection == 0)
-        {
-            steerHoldTime = 0f;
-            lastSteerDirection = 0;
-            smoothedSteerInput = Mathf.MoveTowards(
-                smoothedSteerInput,
-                0f,
-                steeringReturnSpeed * Time.fixedDeltaTime);
-            return;
-        }
-
-        if (inputDirection != lastSteerDirection)
-        {
-            steerHoldTime = 0f;
-            lastSteerDirection = inputDirection;
-        }
-
-        steerHoldTime += Time.fixedDeltaTime;
-        float acceleration = Mathf.SmoothStep(
-            0f,
-            1f,
-            steerHoldTime / Mathf.Max(0.01f, steeringAccelerationTime));
-
-        float speedPrecision = Mathf.InverseLerp(18f, 100f, speedKph);
-        float preciseInitialRate = steeringInitialInputSpeed * Mathf.Lerp(1f, 0.68f, speedPrecision);
-        float inputRate = Mathf.Lerp(preciseInitialRate, steeringInputSpeed, acceleration);
-
-        bool changingDirection = Mathf.Abs(smoothedSteerInput) > 0.03f
-            && Mathf.Sign(smoothedSteerInput) != inputDirection;
-        if (changingDirection) inputRate = Mathf.Max(inputRate, counterSteerInputSpeed);
-        inputRate = Mathf.Lerp(inputRate, counterSteerInputSpeed, driftControlBlend);
-
-        smoothedSteerInput = Mathf.MoveTowards(
-            smoothedSteerInput,
-            rawSteerInput,
-            inputRate * Time.fixedDeltaTime);
     }
 
     private void SetAckermannSteering(float steeringAngle)
@@ -586,13 +513,13 @@ public class WheelController : MonoBehaviour
         float rearSlip = AverageRearSlip();
         float speedFactor = Mathf.InverseLerp(driftMinSpeedKph, 70f, speedKph);
         float entrySpeedFactor = Mathf.InverseLerp(driftMinSpeedKph, 50f, speedKph);
-        float powerOversteer = ThrottleInput * Mathf.Abs(Horizontal) * speedFactor;
+        float powerOversteer = ThrottleInput * Mathf.Abs(smoothedSteerInput) * speedFactor;
         float sustainedSlide = Mathf.InverseLerp(driftSustainSlip, 0.9f, rearSlip) * speedFactor;
         float entryAngleFade = 1f - Mathf.InverseLerp(
             driftEntryCompleteAngle * 0.55f,
             driftEntryCompleteAngle,
             Mathf.Abs(DriftAngle));
-        driftEntryIntent = Mathf.InverseLerp(0.18f, 0.72f, Mathf.Abs(Horizontal))
+        driftEntryIntent = Mathf.InverseLerp(0.18f, 0.72f, Mathf.Abs(smoothedSteerInput))
             * Mathf.InverseLerp(0.25f, 0.85f, ThrottleInput)
             * entrySpeedFactor
             * entryAngleFade;
@@ -627,7 +554,7 @@ public class WheelController : MonoBehaviour
         SetRearForwardGrip(IsHandbraking ? 0.72f : 1.24f);
 
         bool steeringIntoSlide = Mathf.Abs(DriftAngle) < 2f
-            || Mathf.Sign(Horizontal) == -Mathf.Sign(DriftAngle);
+            || Mathf.Sign(smoothedSteerInput) == -Mathf.Sign(DriftAngle);
         if (!IsHandbraking
             && movingForward
             && steeringIntoSlide
@@ -635,7 +562,7 @@ public class WheelController : MonoBehaviour
             && Mathf.Abs(DriftAngle) < driftYawAssistFadeAngle)
         {
             // DriftAngle has the opposite sign to the body's yaw in a powerslide.
-            float yawDirection = Mathf.Abs(DriftAngle) > 2f ? -Mathf.Sign(DriftAngle) : Mathf.Sign(Horizontal);
+            float yawDirection = Mathf.Abs(DriftAngle) > 2f ? -Mathf.Sign(DriftAngle) : Mathf.Sign(smoothedSteerInput);
             float initiationFade = 1f - Mathf.InverseLerp(
                 driftYawAssistFadeAngle * 0.55f,
                 driftYawAssistFadeAngle,
