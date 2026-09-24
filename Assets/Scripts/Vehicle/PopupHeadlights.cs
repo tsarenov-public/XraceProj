@@ -24,11 +24,17 @@ public class PopupHeadlights : MonoBehaviour
     [Range(1f, 179f)] public float lowBeamSpotAngle = 52f;
     [Range(1f, 179f)] public float highBeamSpotAngle = 34f;
 
+    [Header("Свечение линз")]
+    public Material headlightLens;                          // M_HeadlightLens
+    private static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
+    private static readonly Color LensWarm = new Color(1f, 0.93f, 0.75f) * 3f;
+
     public bool IsRaised { get; private set; }
     public bool IsLowBeamOn { get; private set; }
     public bool IsHighBeamOn { get; private set; }
 
     private float openAmount;
+    private float lastLensAmount = -1f;                     // кэш: пишем только по смене
 
     private void Awake()
     {
@@ -72,6 +78,13 @@ public class PopupHeadlights : MonoBehaviour
 
         UpdateLight(leftLight, smoothAmount);
         UpdateLight(rightLight, smoothAmount);
+
+        // линзы: пишем цвет только пока значение реально меняется
+        if (headlightLens != null && smoothAmount != lastLensAmount)
+        {
+            headlightLens.SetColor(EmissionColor, LensWarm * smoothAmount);
+            lastLensAmount = smoothAmount;
+        }
     }
 
     private void UpdateLight(Light lamp, float amount)

@@ -120,6 +120,28 @@ public class WheelController : MonoBehaviour
     public float DriftAngle { get; private set; }
     public int CurrentGear => currentGear;
     public string GearLabel => currentGear < 0 ? "R" : currentGear == 0 ? "N" : currentGear.ToString();
+    public float FrontWheelSteerAngle
+    {
+        get
+        {
+            float angle = 0f;
+            int wheelCount = 0;
+
+            if (frontLeft != null && frontLeft.wheelCol != null)
+            {
+                angle += frontLeft.wheelCol.steerAngle;
+                wheelCount++;
+            }
+
+            if (frontRight != null && frontRight.wheelCol != null)
+            {
+                angle += frontRight.wheelCol.steerAngle;
+                wheelCount++;
+            }
+
+            return wheelCount > 0 ? angle / wheelCount : Horizontal * lowSpeedSteerAngle;
+        }
+    }
     public event Action<int> GearChanged;
 
     private float rawSteerInput;
