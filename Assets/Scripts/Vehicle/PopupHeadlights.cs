@@ -18,6 +18,11 @@ public class PopupHeadlights : MonoBehaviour
     public Light rightLight;
     [Min(0f)] public float lightIntensity = 12f;
 
+    [Header("Свечение линз")]
+    public Material headlightLens;                          // M_HeadlightLens
+    private static readonly int EmissionColor = Shader.PropertyToID("_EmissionColor");
+    private static readonly Color LensWarm = new Color(1f, 0.93f, 0.75f) * 3f;
+
     public bool IsRaised { get; private set; }
 
     private float openAmount;
@@ -58,6 +63,10 @@ public class PopupHeadlights : MonoBehaviour
 
         UpdateLight(leftLight, smoothAmount);
         UpdateLight(rightLight, smoothAmount);
+
+        // НОВОЕ: линзы разгораются синхронно с подъёмом механизма
+        if (headlightLens != null)
+            headlightLens.SetColor(EmissionColor, LensWarm * smoothAmount);
     }
 
     private void UpdateLight(Light lamp, float amount)
