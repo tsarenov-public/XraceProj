@@ -46,7 +46,7 @@ public sealed class VehiclePresentation : MonoBehaviour
 
         float normalizedWheelAngle = controller.FrontWheelSteerAngle
             / Mathf.Max(1f, controller.lowSpeedSteerAngle);
-        float targetAngle = -Mathf.Clamp(normalizedWheelAngle, -1f, 1f)
+        float targetAngle = Mathf.Clamp(normalizedWheelAngle, -1f, 1f)
             * steeringWheelMaximumAngle;
 
         steeringWheelAngle = Mathf.MoveTowards(

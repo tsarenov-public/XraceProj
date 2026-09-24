@@ -35,7 +35,7 @@ public class WheelAlignment : MonoBehaviour
 
         // руль (Y) - родная поза - вращение вокруг своей оси (X)
         wheelGraphic.transform.localRotation =
-            Quaternion.Euler(baseRotation.x, baseRotation.y + wheelCol.steerAngle, baseRotation.z)
+            Quaternion.Euler(baseRotation.x, baseRotation.y - wheelCol.steerAngle, baseRotation.z)
             * rest
             * Quaternion.Euler(spin, 0f, 0f);
     }
