@@ -26,6 +26,7 @@ public class Skidmarks : MonoBehaviour {
 	// END INSPECTOR SETTINGS
 
 	const int MAX_MARKS = 2048; // Max number of marks total for everyone together
+	const int SKIDMARK_RENDER_QUEUE = 3100; // Must render after EasyRoads transparent road materials
 	const float MARK_WIDTH = 0.35f; // Width of the skidmarks. Should match the width of the wheels
 	const float MIN_DISTANCE = 0.25f; // Distance between skid texture sections in metres. Bigger = better performance, less smooth
 	const float MIN_SQR_DISTANCE = MIN_DISTANCE * MIN_DISTANCE;
@@ -108,6 +109,8 @@ public class Skidmarks : MonoBehaviour {
 		mr.shadowCastingMode = ShadowCastingMode.Off;
 		mr.receiveShadows = false;
 		mr.material = skidmarksMaterial;
+		mr.material.renderQueue = SKIDMARK_RENDER_QUEUE;
+		mr.sortingOrder = 10;
 		mr.lightProbeUsage = LightProbeUsage.Off;
 	}
 
