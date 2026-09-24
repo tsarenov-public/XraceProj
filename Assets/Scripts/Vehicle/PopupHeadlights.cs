@@ -26,6 +26,7 @@ public class PopupHeadlights : MonoBehaviour
     public bool IsRaised { get; private set; }
 
     private float openAmount;
+    private float lastLensAmount = -1f;                     // кэш: пишем только по смене
 
     private void Awake()
     {
@@ -64,9 +65,12 @@ public class PopupHeadlights : MonoBehaviour
         UpdateLight(leftLight, smoothAmount);
         UpdateLight(rightLight, smoothAmount);
 
-        // НОВОЕ: линзы разгораются синхронно с подъёмом механизма
-        if (headlightLens != null)
+        // линзы: пишем цвет только пока значение реально меняется
+        if (headlightLens != null && smoothAmount != lastLensAmount)
+        {
             headlightLens.SetColor(EmissionColor, LensWarm * smoothAmount);
+            lastLensAmount = smoothAmount;
+        }
     }
 
     private void UpdateLight(Light lamp, float amount)
@@ -74,7 +78,6 @@ public class PopupHeadlights : MonoBehaviour
         if (lamp == null)
             return;
 
-        lamp.enabled = amount > 0.02f;
-        lamp.intensity = lightIntensity * amount;
+        lamp.intensity = lightIntensity * amount;   // enabled НЕ трогаем: 0 = выкл
     }
 }
