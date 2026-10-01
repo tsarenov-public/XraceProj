@@ -1,4 +1,4 @@
-﻿Shader "Skidmarks" {
+Shader "Skidmarks" {
 	Properties {
 		_Color("Main Color", Color) = (1,1,1,1)
 		_MainTex("Base (RGB) Trans (A)", 2D) = "white" {}
@@ -8,7 +8,7 @@
 		Offset -4, -4
 		ZWrite Off
 		Alphatest Greater 0
-		Tags{ "Queue" = "Transparent"  "RenderType" = "Transparent" }
+		Tags{ "Queue" = "Transparent+100"  "RenderType" = "Transparent" }
 
 		SubShader{
 			ColorMaterial AmbientAndDiffuse
@@ -28,5 +28,4 @@
 
 	// Fallback to Alpha Vertex Lit
 	Fallback "Transparent/VertexLit", 2
-
 }

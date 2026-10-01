@@ -39,9 +39,9 @@ public class WheelController : MonoBehaviour
     [Tooltip("Скорость реакции дросселя. Сглаживание убирает мгновенный игрушечный рывок при нажатии газа")]
     public float throttleResponse = 3.8f;
     public float engineBrakingTorque = 90f;
+    [Tooltip("Максимальный тормозящий момент трансмиссии при превышении скорости выбранной передачи")]
+    public float gearOverspeedBrakingTorque = 500f;
     [Range(0.5f, 1f)] public float drivetrainEfficiency = 0.88f;
-    [Tooltip("Короткое отключение тяги на отсечке не даёт колёсам раскручиваться выше диапазона текущей передачи")]
-    public float revLimiterCutDuration = 0.055f;
     [Tooltip("Мягкое ограничение максимальной скорости автомобиля. Тяга плавно уменьшается перед этим значением")]
     public float maximumVehicleSpeedKph = 195f;
     public float topSpeedTorqueFadeRangeKph = 14f;
@@ -69,6 +69,8 @@ public class WheelController : MonoBehaviour
     public float driftEntryRearStiffness = 0.69f;
     public float driftEntryCompleteAngle = 18f;
     public float handbrakeRearStiffness = 0.36f;
+    [Tooltip("Продольное сцепление задних шин в заносе; меньшее значение снижает потерю скорости от скольжения")]
+    public float slidingRearForwardStiffness = 0.88f;
     public float gripChangeSpeed = 5f;
     [Tooltip("Медленный возврат сцепления не даёт машине резко выстреливать из заноса")]
     public float gripRecoverySpeed = 1.45f;
@@ -117,6 +119,7 @@ public class WheelController : MonoBehaviour
     public float EngineRpm { get; private set; }
     public float SpeedKph => RB == null ? 0f : RB.linearVelocity.magnitude * 3.6f;
     public float ForwardSpeedKph => RB == null ? 0f : Vector3.Dot(RB.linearVelocity, transform.forward) * 3.6f;
+    public float CurrentGearLimitKph => GetGearSpeedLimitKph();
     public float DriftAngle { get; private set; }
     public int CurrentGear => currentGear;
     public string GearLabel => currentGear < 0 ? "R" : currentGear == 0 ? "N" : currentGear.ToString();
@@ -151,7 +154,6 @@ public class WheelController : MonoBehaviour
     private float shiftTimer;
     private float clutch = 1f;
     private float driveThrottle;
-    private float revLimiterTimer;
     private int pendingShift;
     private WheelAlignment frontLeft;
     private WheelAlignment frontRight;
@@ -292,6 +294,7 @@ public class WheelController : MonoBehaviour
         int requestedGear = Mathf.Clamp(currentGear + direction, -1, maximumGear);
 
         if (requestedGear < 0 && Mathf.Abs(ForwardSpeedKph) > 5f) return;
+        if (requestedGear > 0 && Mathf.Abs(ForwardSpeedKph) > GetGearSpeedLimitKph(requestedGear) * 1.02f) return;
         if (requestedGear == currentGear) return;
 
         currentGear = requestedGear;
@@ -386,32 +389,43 @@ public class WheelController : MonoBehaviour
         float drivenWheelRpm = AverageDrivenWheelRpm();
         float ratio = GetActiveGearRatio();
         float coupledRpm = Mathf.Abs(drivenWheelRpm * ratio * finalDriveRatio);
+        float gearSpeedLimitKph = GetGearSpeedLimitKph();
+        float longitudinalSpeedKph = Mathf.Abs(ForwardSpeedKph);
+        // Wheel RPM alone is unreliable during a drift or when a wheel loses grip.
+        float roadCoupledRpm = gearSpeedLimitKph > 0f
+            ? longitudinalSpeedKph / gearSpeedLimitKph * redlineRpm
+            : 0f;
+        float effectiveCoupledRpm = Mathf.Max(coupledRpm, roadCoupledRpm);
         float freeRevRpm = Mathf.Lerp(idleRpm, redlineRpm * 0.94f, driveThrottle);
         float targetRpm = currentGear == 0 || clutch < 0.15f
             ? freeRevRpm
-            : Mathf.Max(idleRpm, coupledRpm);
+            : Mathf.Max(idleRpm, effectiveCoupledRpm);
 
         EngineRpm = Mathf.Lerp(EngineRpm, targetRpm, 1f - Mathf.Exp(-engineRpmResponse * Time.fixedDeltaTime));
         EngineRpm = Mathf.Clamp(EngineRpm, idleRpm, redlineRpm * 1.015f);
 
-        if (revLimiterTimer > 0f)
-            revLimiterTimer -= Time.fixedDeltaTime;
-
-        bool wheelSpeedAtLimiter = currentGear != 0
-            && clutch > 0.5f
-            && coupledRpm >= redlineRpm * 0.995f;
-        if (wheelSpeedAtLimiter && driveThrottle > 0.05f)
-            revLimiterTimer = Mathf.Max(revLimiterTimer, revLimiterCutDuration);
-
         float motorTorquePerWheel = 0f;
         if (currentGear != 0
             && clutch > 0f
-            && revLimiterTimer <= 0f
-            && coupledRpm < redlineRpm)
+            && roadCoupledRpm < redlineRpm)
         {
             float engineTorque = EvaluateEngineTorque(EngineRpm) * driveThrottle;
             motorTorquePerWheel = engineTorque * ratio * finalDriveRatio * drivetrainEfficiency * clutch * 0.5f;
             motorTorquePerWheel *= GetDriftPowerScale();
+
+            // Spinning tyres can hit redline well below the gear's road-speed limit.
+            // Reduce torque progressively instead of cutting it and killing the slide.
+            float wheelLimiter = Mathf.InverseLerp(redlineRpm * 0.98f, redlineRpm * 1.12f, coupledRpm);
+            motorTorquePerWheel *= Mathf.Lerp(1f, 0.55f, wheelLimiter);
+
+            // Let each gear run to its redline, then smoothly remove drive torque.
+            // Vehicle speed provides a second limit when driven wheels slip.
+            float gearFadeStart = gearSpeedLimitKph * 0.92f;
+            float gearFade = 1f - Mathf.InverseLerp(
+                gearFadeStart,
+                Mathf.Max(gearFadeStart + 1f, gearSpeedLimitKph),
+                longitudinalSpeedKph);
+            motorTorquePerWheel *= gearFade;
 
             float absoluteForwardSpeed = Mathf.Abs(ForwardSpeedKph);
             float speedFadeStart = Mathf.Max(0f, maximumVehicleSpeedKph - topSpeedTorqueFadeRangeKph);
@@ -421,11 +435,17 @@ public class WheelController : MonoBehaviour
                 absoluteForwardSpeed);
             motorTorquePerWheel *= topSpeedFade;
         }
-        else if (wheelSpeedAtLimiter && coupledRpm > redlineRpm * 1.005f)
+
+        if (gearSpeedLimitKph > 0f && clutch > 0.5f && longitudinalSpeedKph > gearSpeedLimitKph)
         {
-            // A selected gear mechanically resists wheel overspeed instead of
-            // letting the car coast far beyond that gear's usable RPM range.
-            motorTorquePerWheel = -Mathf.Sign(drivenWheelRpm) * engineBrakingTorque * 0.5f;
+            // Downshifting too early and descending a hill should not allow
+            // a low gear to coast far past its redline.
+            float overspeed = Mathf.InverseLerp(
+                gearSpeedLimitKph,
+                gearSpeedLimitKph + 12f,
+                longitudinalSpeedKph);
+            float brakingTorque = Mathf.Lerp(engineBrakingTorque, gearOverspeedBrakingTorque, overspeed);
+            motorTorquePerWheel = -Mathf.Sign(ForwardSpeedKph) * brakingTorque * 0.5f;
         }
 
         ApplyDrivenWheelTorque(rearLeft, motorTorquePerWheel);
@@ -446,6 +466,29 @@ public class WheelController : MonoBehaviour
         if (currentGear < 0) return -reverseGearRatio;
         if (currentGear == 0 || forwardGearRatios == null || forwardGearRatios.Length == 0) return 0f;
         return forwardGearRatios[Mathf.Clamp(currentGear - 1, 0, forwardGearRatios.Length - 1)];
+    }
+
+    private float GetGearSpeedLimitKph()
+    {
+        return GetGearSpeedLimitKph(currentGear);
+    }
+
+    private float GetGearSpeedLimitKph(int gear)
+    {
+        float gearRatio = gear < 0
+            ? reverseGearRatio
+            : gear > 0 && forwardGearRatios != null && gear <= forwardGearRatios.Length
+                ? forwardGearRatios[gear - 1]
+                : 0f;
+        float ratio = Mathf.Abs(gearRatio * finalDriveRatio);
+        if (ratio < 0.01f) return 0f;
+
+        float wheelRadius = rearLeft != null && rearLeft.wheelCol != null
+            ? rearLeft.wheelCol.radius
+            : rearRight != null && rearRight.wheelCol != null
+                ? rearRight.wheelCol.radius
+                : 0.31f;
+        return redlineRpm * (2f * Mathf.PI * wheelRadius) * 0.06f / ratio;
     }
 
     private float EvaluateEngineTorque(float rpm)
@@ -551,7 +594,8 @@ public class WheelController : MonoBehaviour
         SetSidewaysStiffness(frontRight, frontSidewaysStiffness);
         SetSidewaysStiffness(rearLeft, targetRearStiffness);
         SetSidewaysStiffness(rearRight, targetRearStiffness);
-        SetRearForwardGrip(IsHandbraking ? 0.72f : 1.24f);
+        float rearForwardGrip = Mathf.Lerp(1.24f, slidingRearForwardStiffness, rearGripBlend);
+        SetRearForwardGrip(IsHandbraking ? 0.72f : rearForwardGrip);
 
         bool steeringIntoSlide = Mathf.Abs(DriftAngle) < 2f
             || Mathf.Sign(smoothedSteerInput) == -Mathf.Sign(DriftAngle);

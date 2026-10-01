@@ -31148,13 +31148,13 @@ MonoBehaviour:
   target: {fileID: 6819182002990901183}
   targetRb: {fileID: 8852685126421154004}
   targetOffset: {x: 0, y: 1.15, z: 0.15}
-  standDistance: 6.2
-  highSpeedDistance: 7.6
+  standDistance: 4.6
+  highSpeedDistance: 4.9
   standHeight: 1.35
   highSpeedHeight: 1.7
   fullDistanceSpeedKph: 160
   positionSmoothTime: 0.14
-  accelerationDistance: 0.35
+  accelerationDistance: 0.05
   teleportDistance: 18
   trajectoryInfluence: 0.55
   headingSharpness: 5.5
@@ -31164,7 +31164,7 @@ MonoBehaviour:
   accelerationPitch: 1.1
   rotationSharpness: 9
   minFov: 62
-  maxFov: 78
+  maxFov: 70
   fullFovSpeedKph: 180
   driftFovBonus: 3.5
   fovSharpness: 3.5
@@ -32664,14 +32664,15 @@ MonoBehaviour:
   absSlipLimit: 0.95
   frontSidewaysStiffness: 1.35
   rearSidewaysStiffness: 1.16
-  powerSlideRearStiffness: 0.86
-  driftEntryRearStiffness: 0.69
+  powerSlideRearStiffness: 0.76
+  driftEntryRearStiffness: 0.61
   driftEntryCompleteAngle: 18
   handbrakeRearStiffness: 0.36
+  slidingRearForwardStiffness: 0.98
   gripChangeSpeed: 5
   gripRecoverySpeed: 1.45
-  driftMinSpeedKph: 22
-  driftSustainSlip: 0.22
+  driftMinSpeedKph: 18
+  driftSustainSlip: 0.18
   driftYawAssist: 640
   driftYawAssistFadeAngle: 32
   driftStabilityAssist: 0.84
@@ -32684,7 +32685,7 @@ MonoBehaviour:
   spinRecoveryTorque: 2900
   spinPowerLimitStartAngle: 38
   spinPowerLimitFullAngle: 63
-  minimumDriftPower: 0.52
+  minimumDriftPower: 0.68
   antiRollFront: 7200
   antiRollRear: 6100
   aerodynamicDownforce: 8

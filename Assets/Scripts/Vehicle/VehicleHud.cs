@@ -125,7 +125,7 @@ public sealed class VehicleHud : MonoBehaviour
         speedUnit.color = new Color(0.62f, 0.7f, 0.73f);
 
         Text gearCaption = CreateText(gaugeRect, "Gear Caption", font, 9, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(gearCaption.rectTransform, new Vector2(-69f, -55f), new Vector2(54f, 18f));
+        SetRect(gearCaption.rectTransform, new Vector2(-69f, -45f), new Vector2(54f, 18f));
         gearCaption.text = "GEAR";
         gearCaption.color = new Color(0.65f, 0.7f, 0.72f);
 
@@ -135,7 +135,7 @@ public sealed class VehicleHud : MonoBehaviour
         AddShadow(gearText, new Color(0f, 0f, 0f, 0.88f), new Vector2(2f, -2f));
 
         Text rpmCaption = CreateText(gaugeRect, "Rpm Caption", font, 9, FontStyle.Bold, TextAnchor.MiddleCenter);
-        SetRect(rpmCaption.rectTransform, new Vector2(54f, -55f), new Vector2(66f, 18f));
+        SetRect(rpmCaption.rectTransform, new Vector2(54f, -45f), new Vector2(66f, 18f));
         rpmCaption.text = "RPM";
         rpmCaption.color = new Color(0.65f, 0.7f, 0.72f);
 
