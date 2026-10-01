@@ -66,3 +66,21 @@ MusicManager уже присутствует в сцене. При его отс
 Assets/Audio/Music — папка для пользовательских треков; на момент генерации музыкальных клипов в проекте нет. Назначать Tracks в сцене и в префабе MusicManager для резервного создания.
 GarageSceneBuilder (Assets/Scripts/Editor): Xrace/Create Beta Garage; создаёт исходную сцену и отказывается перезаписывать существующий гараж.
 GarageSmokeCheck.Run — batch Play Mode проверка настоящих OnClick, смены превью, безопасности превью и загрузки Touge01 с сохранённым выбором.
+
+## Этап 4: гоночное ядро
+
+RaceRoot содержит CarSpawner, RaceSessionManager, RaceTimer, VehicleDriftStateAdapter, DriftScorer, CarStopOnFinish.
+CarSpawner: StartSpawn, fallbackCar (исходная сценная AE86), sceneVehicleObjects (старая машина/камеры), session — serialized. Выбранный префаб создаётся один раз; старая машина и её камеры отключаются. Повторный Spawn возвращает уже связанную машину. SpawnedRaceCar помечает активный автомобиль. Без выбора используется сценная AE86, перемещённая на StartSpawn.
+Ready -> Racing при горизонтальной скорости строго выше startSpeedKmh (5): вертикальное падение при спавне не запускает таймер. Racing -> Finished один раз через RaceFinishTrigger; пауза запрещает старт/финиш и начисление.
+RaceTimer считает Time.deltaTime только в Racing, без паузы, формат mm:ss.fff. SetPaused(bool) должен вызываться будущим контроллером паузы вместе с Time.timeScale.
+VehicleDriftStateAdapter читает WheelController.SpeedKph/DriftAngle и grounded у WheelCollider; fallback — Rigidbody и проверка земли лучом. Пороги 25 км/ч, 12 градусов; разворот >=85 градусов и движение назад не считаются дрифтом.
+DriftZone: zoneId (с 1 без пропусков), minDriftTime=0.35, minSpeedKmh=25, session, scorer; BoxCollider IsTrigger=true, без Rigidbody. Коллайдеры машины учитываются набором: зона заканчивается только после выхода последнего коллайдера.
+DriftScorer учитывает только одну активную зону и ожидает возрастающий zoneId. Повтор старой зоны игнорируется; пропуск зоны сбрасывает цепочку и начинает новую на следующей встреченной зоне. Пересечения боксов недопустимы.
+Множитель в зоне = successfulChain+1. Успех — суммарный валидный дрифт в зоне >=minDriftTime, выход повышает цепочку; неуспех сбрасывает цепочку/x1, очки сохраняются. Короткий дрифт начисляет очки, но не повышает цепочку.
+Очки = 100 * clamp01(abs(slip)/45) * clamp01(kmh/80) * multiplier * fixedDeltaTime. В интерфейсе показывается целая часть; дроби сохраняются внутри расчёта. MaxMultiplier хранит максимальный реально использованный множитель.
+События: OnScoreChanged(int), OnMultiplierChanged(int), OnZoneSuccess(int zoneId), OnChainReset().
+На финише управление WheelController отключается, motorTorque=0, применяется тормоз колёс; velocity и angularVelocity плавно гасятся за 0.75 сек, затем isKinematic=true. Подвеска/сцепление и WheelCollider не изменяются.
+RaceCanvas/HUD_Panel: Time_Text, Score_Text, Multiplier_Text, компонент RaceHud со ссылками на таймер/счётчик/тексты.
+Автоматически размещены 19 зон по изгибам дорожного меша. Их границы нужно проверить ручным проездом, особенно на соседних витках серпантина. Разметка не заменяет художественную настройку поворотов.
+Старт (311,152,-156), финиш (-372,40,190); направления взяты из центральной линии дороги. Бокс финиша 20x5x4.
+Сохранение JSON и окно финиша в этом этапе ещё не подключены; результат доступен через RaceTimer.TimeSeconds, DriftScorer.Score/MaxMultiplier и событие RaceSessionManager.OnStateChanged.

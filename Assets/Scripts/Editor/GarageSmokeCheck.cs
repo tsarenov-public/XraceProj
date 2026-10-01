@@ -41,6 +41,9 @@ public static class GarageSmokeCheck
             {
                 if (scene.name != "Touge01") return;
                 Require(SelectedCarService.Get() != null && SelectedCarService.Get().carId == "ae86", "Selected car did not survive scene transition.");
+                var raceSession=scene.GetRootGameObjects().Select(root=>root.GetComponent<RaceSessionManager>()).First(value=>value!=null);
+                Require(raceSession.CarBody!=null && raceSession.CarBody.GetComponentInParent<SpawnedRaceCar>()!=null,"Selected car was not spawned on track.");
+                Require(raceSession.GetComponent<CarSpawner>().Spawn()==raceSession.CarBody,"Repeated spawn created a second car.");
                 Debug.Log("XRACE_GARAGE_SMOKE_OK: initial preview, next, previous, safe preview, selected car and Touge01 load.");
                 SessionState.SetInt(Key, 0);
                 EditorApplication.Exit(0);
@@ -61,7 +64,7 @@ public static class GarageSmokeCheck
             if (step == 1)
             {
                 Require(name.text == "Toyota AE86", "Wrong initial car label.");
-                CapturePreview(roots);
+                if (Environment.GetCommandLineArgs().Contains("-xrace-capture-preview")) CapturePreview(roots);
                 buttons.First(button => button.name == "Btn_NextCar").onClick.Invoke();
             }
             else if (step == 2)
