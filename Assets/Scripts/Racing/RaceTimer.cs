@@ -4,6 +4,7 @@ public class RaceTimer : MonoBehaviour
 {
     [SerializeField] private RaceSessionManager session;
     public float TimeSeconds { get; private set; }
+    public event Action<float> OnTimeChanged;
     public string FormattedTime
     {
         get
@@ -15,6 +16,10 @@ public class RaceTimer : MonoBehaviour
     private void Update()
     {
         if (session.State == RaceSessionManager.RaceState.Racing && !session.IsPaused)
+        {
+            if (Time.deltaTime <= 0) return;
             TimeSeconds += Time.deltaTime;
+            OnTimeChanged?.Invoke(TimeSeconds);
+        }
     }
 }

@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 [InitializeOnLoad]
 public static class RaceCoreSmokeCheck
@@ -19,6 +20,10 @@ public static class RaceCoreSmokeCheck
     private static int savedScore;
     private static float savedTime;
     private static int frames;
+    private static TMP_Text hudTime;
+    private static TMP_Text hudScore;
+    private static TMP_Text hudMultiplier;
+    private static GameObject hudPanel;
     private class FakeState : IVehicleDriftState
     {
         public float SpeedKmh=>80;
@@ -47,6 +52,9 @@ public static class RaceCoreSmokeCheck
                 var roots=SceneManager.GetActiveScene().GetRootGameObjects();
                 session=roots.Select(r=>r.GetComponent<RaceSessionManager>()).First(v=>v!=null);
                 timer=session.GetComponent<RaceTimer>();scorer=session.GetComponent<DriftScorer>();
+                var texts=roots.SelectMany(r=>r.GetComponentsInChildren<TMP_Text>(true)).ToArray();
+                hudTime=texts.First(t=>t.name=="Time_Text");hudScore=texts.First(t=>t.name=="Score_Text");hudMultiplier=texts.First(t=>t.name=="Multiplier_Text");hudPanel=hudTime.transform.parent.gameObject;
+                Require(hudPanel.activeSelf && hudTime.text=="00:00.000" && hudScore.text=="Дрифт: 0" && hudMultiplier.text=="x1","Initial HUD incorrect.");
                 zones=session.GetComponentsInChildren<DriftZone>().OrderBy(z=>z.ZoneId).ToArray();
                 for(int i=0;i<zones.Length;i++)
                 {
@@ -67,6 +75,7 @@ public static class RaceCoreSmokeCheck
             else if(step==2)
             {
                 Require(session.State==RaceSessionManager.RaceState.Racing && timer.TimeSeconds>0,"Movement did not start timer.");
+                Require(hudTime.text==timer.FormattedTime,"HUD time format/synchronization.");
                 fake=new FakeState();
                 typeof(DriftScorer).GetField("vehicleState",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(scorer,fake);
                 scorer.EnterZone(zones[0]);Require(scorer.currentMultiplier==1,"Zone 1 multiplier.");
@@ -76,6 +85,9 @@ public static class RaceCoreSmokeCheck
             {
                 scorer.ExitZone(zones[0]);Require(scorer.Score>=40 && scorer.successfulChain==1,"Zone 1 scoring/chain.");
                 scorer.EnterZone(zones[1]);Require(scorer.currentMultiplier==2,"Zone 2 multiplier.");
+                Require(hudMultiplier.text=="x2" && hudScore.text=="Дрифт: "+scorer.Score,"HUD did not react to drift events.");
+                var controller=hudPanel.GetComponentInParent<RaceHUDController>();controller.enabled=false;controller.enabled=true;
+                Require(hudMultiplier.text=="x2" && hudScore.text=="Дрифт: "+scorer.Score,"HUD resubscription did not restore current values.");
                 nextTime=Time.time+0.5f;
             }
             else if(step==4)
@@ -86,6 +98,7 @@ public static class RaceCoreSmokeCheck
             else if(step==5)
             {
                 scorer.ExitZone(zones[2]);Require(scorer.successfulChain==0 && scorer.currentMultiplier==1 && scorer.Score==savedScore,"Failed zone did not reset chain/preserve points.");
+                Require(hudMultiplier.text=="x1" && hudScore.text=="Дрифт: "+savedScore,"HUD chain reset display incorrect.");
                 savedTime=timer.TimeSeconds;session.SetPaused(true);nextTime=Time.time+0.25f;
             }
             else if(step==6)
@@ -97,12 +110,13 @@ public static class RaceCoreSmokeCheck
                 Debug.Log("RACE_FINISH_CHECK state="+session.State+" paused="+session.IsPaused+" timescale="+Time.timeScale+" collider="+collider.name);
                 trigger.SendMessage("OnTriggerEnter",collider);
                 Require(session.State==RaceSessionManager.RaceState.Finished && !session.TryFinish(),"Finish did not latch exactly once.");
+                Require(!hudPanel.activeSelf,"HUD overlaps finish window.");
                 savedTime=timer.TimeSeconds;nextTime=Time.time+1;
             }
             else
             {
                 Require(session.CarBody.isKinematic && timer.TimeSeconds==savedTime,"Finish did not freeze car/timer.");
-                Debug.Log("XRACE_RACE_SMOKE_OK: fallback/no duplicate, timer on move, x1/x2, reset keeps score, pause, one finish, stopped car.");
+                Debug.Log("XRACE_RACE_SMOKE_OK: fallback/no duplicate, timer on move, x1/x2, reset keeps score, pause, one finish, stopped car; HUD ready/time/score/multiplier/resubscribe/hide verified.");
                 SessionState.SetInt(Key,0);EditorApplication.Exit(0);return;
             }
             SessionState.SetInt(Key,step+1);

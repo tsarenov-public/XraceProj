@@ -158,15 +158,15 @@ public static class RaceSceneBuilder
         var canvas=new GameObject("RaceCanvas",typeof(RectTransform),typeof(Canvas),typeof(CanvasScaler));
         canvas.GetComponent<Canvas>().renderMode=RenderMode.ScreenSpaceOverlay;
         var scaler=canvas.GetComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);scaler.matchWidthOrHeight=0.5f;
-        var panel=new GameObject("HUD_Panel",typeof(RectTransform),typeof(RaceHud));panel.transform.SetParent(canvas.transform,false);
+        var panel=new GameObject("HUD_Panel",typeof(RectTransform));panel.transform.SetParent(canvas.transform,false);
         var rect=panel.GetComponent<RectTransform>();rect.anchorMin=rect.anchorMax=new Vector2(0,1);rect.pivot=new Vector2(0,1);rect.anchoredPosition=new Vector2(40,-40);rect.sizeDelta=new Vector2(500,180);
         TMP_FontAsset font=AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/UI/Fonts/GarageFont.asset");
         var names=new[]{"Time_Text","Score_Text","Multiplier_Text"};var texts=new TMP_Text[3];
         for(int i=0;i<3;i++)
         {
-            var text=new GameObject(names[i],typeof(RectTransform),typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();text.transform.SetParent(panel.transform,false);text.font=font;text.fontSize=36;text.raycastTarget=false;text.text=i==0?"00:00.000":i==1?"0":"x1";
+            var text=new GameObject(names[i],typeof(RectTransform),typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();text.transform.SetParent(panel.transform,false);text.font=font;text.fontSize=36;text.raycastTarget=false;text.text=i==0?"00:00.000":i==1?"Дрифт: 0":"x1";
             text.rectTransform.anchorMin=text.rectTransform.anchorMax=new Vector2(0,1);text.rectTransform.pivot=new Vector2(0,1);text.rectTransform.anchoredPosition=new Vector2(0,-55*i);text.rectTransform.sizeDelta=new Vector2(500,55);texts[i]=text;
         }
-        Set(panel.GetComponent<RaceHud>(),"timer",timer,"scorer",scorer,"timeText",texts[0],"scoreText",texts[1],"multiplierText",texts[2]);
+        Set(canvas.AddComponent<RaceHUDController>(),"session",root.GetComponent<RaceSessionManager>(),"timer",timer,"scorer",scorer,"hudPanel",panel,"timeText",texts[0],"scoreText",texts[1],"multiplierText",texts[2]);
     }
 }

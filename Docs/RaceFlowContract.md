@@ -80,7 +80,18 @@ DriftScorer учитывает только одну активную зону �
 Очки = 100 * clamp01(abs(slip)/45) * clamp01(kmh/80) * multiplier * fixedDeltaTime. В интерфейсе показывается целая часть; дроби сохраняются внутри расчёта. MaxMultiplier хранит максимальный реально использованный множитель.
 События: OnScoreChanged(int), OnMultiplierChanged(int), OnZoneSuccess(int zoneId), OnChainReset().
 На финише управление WheelController отключается, motorTorque=0, применяется тормоз колёс; velocity и angularVelocity плавно гасятся за 0.75 сек, затем isKinematic=true. Подвеска/сцепление и WheelCollider не изменяются.
-RaceCanvas/HUD_Panel: Time_Text, Score_Text, Multiplier_Text, компонент RaceHud со ссылками на таймер/счётчик/тексты.
+RaceCanvas/HUD_Panel: Time_Text, Score_Text, Multiplier_Text. С этапа 5 контроллер RaceHUDController находится на RaceCanvas, вне скрываемой панели.
 Автоматически размещены 19 зон по изгибам дорожного меша. Их границы нужно проверить ручным проездом, особенно на соседних витках серпантина. Разметка не заменяет художественную настройку поворотов.
 Старт (311,152,-156), финиш (-372,40,190); направления взяты из центральной линии дороги. Бокс финиша 20x5x4.
 Сохранение JSON и окно финиша в этом этапе ещё не подключены; результат доступен через RaceTimer.TimeSeconds, DriftScorer.Score/MaxMultiplier и событие RaceSessionManager.OnStateChanged.
+
+## Этап 5: HUD
+
+Assets/Scripts/UI/RaceHUDController.cs на RaceCanvas: session, timer, scorer (компоненты RaceRoot), hudPanel, timeText, scoreText, multiplierText — serialized-ссылки.
+RaceTimer.OnTimeChanged(float timeSeconds) вызывается при изменении времени; HUD подписывается на него, DriftScorer.OnScoreChanged/OnMultiplierChanged и RaceSessionManager.OnStateChanged в OnEnable, отписывается в OnDisable.
+Начальные значения и значения после повторного включения берутся из текущего состояния заезда. Время mm:ss.fff (минуты не оборачиваются после 59), очки «Дрифт: 12450», множитель «x2».
+Контроллер не имеет Update: числа формируются в переиспользуемых char[] и передаются TMP.SetCharArray без конкатенаций/ToString/string.Format. Буферы и TMP вместимость прогреваются при включении. Это не обещание отсутствия всех аллокаций сторонних скриптов или всего Canvas.
+В установленной версии TMP SetCharArray внутри UNITY_EDITOR создаёт строку для инспектора; эта ветка отсутствует в Player. Проверка GC в редакторе должна учитывать это поведение TMP.
+HUD_Panel активна в Ready/Racing, скрыта в Finished. Контроллер остаётся включён на Canvas; HUD CanvasGroup не блокирует raycasts, тексты не перехватывают клики.
+Расположение, размеры, шрифт, цвет и выравнивание TMP контроллер не меняет. Score Prefix в инспекторе (по умолчанию «Дрифт: ») задаёт подпись перед очками; менять вне Play Mode. Поля Text заполняются данными во время игры.
+RaceHUDEditorSetup (Assets/Scripts/Editor), меню Xrace/Upgrade Race HUD, настраивает ссылки в существующем HUD, сохраняя RectTransform и оформление.
