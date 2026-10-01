@@ -32,11 +32,11 @@ SaveResult: resultId, place (с 1), isNewRecord (очки строго боль�
 
 ## Этап 2: музыка и настройки
 
-По уточнению этапа 2 музыка играет и в Garage, и в Touge01, непрерывно при переходах.
+По уточнению этапа 7 музыка запускается при загрузке Touge01, в Garage остановлена. При повторном запуске карты выбранный трек начинается сначала.
 Выделенный корневой GameObject MusicManager в Garage: MusicManager + AudioSource; singleton DontDestroyOnLoad.
 tracks: AudioClip[] в порядке переключения. Пустые слоты пропускаются, пустой список безопасен. Каждый трек повторяется до ручного переключения.
 NextTrack()/PrevTrack() переключают циклически; кнопки вызывают эти методы.
-Клавиши RightArrow/LeftArrow для музыки разрешены в Garage, пока GarageManager не включил режим выбора машин, и в Touge01 только при racePaused.
+Клавиши RightArrow/LeftArrow для музыки разрешены только в Touge01 при racePaused. В гараже стрелки выбирают машины.
 Контроллер паузы обязан вызвать MusicManager.Instance.SetRacePaused(true) при открытии и false при продолжении/финише/выходе. При смене активной сцены флаг сбрасывается.
 Во время активной гонки Update выходит до чтения клавиатуры; нет поиска сцен, загрузки ресурсов или управляемых аллокаций каждый кадр.
 Поддерживается Legacy Input (KeyCode) и New Input System при отключённом Legacy.
@@ -108,3 +108,15 @@ RaceCanvas содержит GraphicRaycaster, в сцене создан EventSy
 Оформление редактируется RectTransform/TMP/Button/Image в Unity. Контроллер не меняет размеры, позиции, цвета и шрифты. FinishPanelEditorSetup создаёт панель один раз и отказывается перезаписывать существующую.
 FinishPanelSmokeCheck проверяет три заезда (рекорд/равенство/новый рекорд), сохранение один раз, значения текстов, две перезагрузки и возврат в Garage. Исходная история временно переносится в резервный файл и восстанавливается после проверки.
 Таблица результатов, кнопка результатов и зависимость от таблицы отсутствуют по уточнению этапа 6. Следующий шаг — пауза и настройки громкости.
+
+## Этап 7: пауза и громкость
+
+PauseMenuController на RaceCanvas (вне скрываемых панелей). Serialized: session из RaceRoot, pausePanel, settingsPanel, musicVolumeSlider, trackNameText, musicManagerPrefab.
+Pause_Panel: Btn_Continue, Btn_Settings, Btn_ExitGarage. Settings_Panel: MusicVolume_Slider (0..1), Btn_MusicPrev, Btn_MusicNext, TrackName_Text, Btn_SettingsBack. Обе панели изначально выключены.
+Кнопки привязаны к Continue/OpenSettings/ExitGarage/PrevTrack/NextTrack/SettingsBack; Slider.OnValueChanged Dynamic float -> SetMusicVolume.
+ESC переключает паузу только в Touge01, в Ready/Racing; после Finished игнорируется. Код не вызывает Application.Quit. New Input System приоритетен, Legacy KeyCode используется при отсутствии New Input System.
+Открытие: Time.timeScale=0, session.SetPaused(true), AudioListener.pause=true, курсор освобождается. Музыка ignoreListenerPause=true продолжает играть. Продолжение возвращает timeScale=1, звуки и прежнее состояние курсора.
+Настройки не снимают паузу. Громкость загружается через SetValueWithoutNotify, изменение применяет SettingsService.Set/Save и AudioSource.volume. Стрелки листают треки через MusicManager; Navigation=None у слайдера/кнопок предотвращает двойное действие стрелок.
+При прямом запуске Touge01 менеджер создаётся из Assets/Prefabs/Systems/MusicManager.prefab; в Garage используется существующий менеджер. MusicManager в Garage является экземпляром этого префаба: настройте tracks один раз в префабе. Сейчас музыкальные клипы не добавлены; звуки машины не используются вместо музыки.
+Для оформления временно включите нужную панель вне Play Mode, меняйте RectTransform/TMP/Image, затем выключите обе панели и сохраните Touge01. Контроллер оставьте включённым на RaceCanvas.
+Editor: Xrace/Create Pause And Settings Panels создаёт начальную разметку; повторное создание блокируется, чтобы сохранить ручной дизайн. PauseMenuSmokeCheck.Run проверяет паузу, таймер, громкость, треки и переход в гараж, возвращает исходную пользовательскую громкость после теста.

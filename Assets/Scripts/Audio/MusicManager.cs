@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
@@ -12,10 +12,10 @@ public class MusicManager : MonoBehaviour
     [SerializeField] private AudioClip[] tracks;
     [SerializeField] private AudioSource audioSource;
     private int currentTrack = -1;
-    private bool inGarage;
+    public AudioClip CurrentTrack => audioSource != null ? audioSource.clip : null;
+    public event System.Action OnTrackChanged;
     private bool inRace;
     private bool racePaused;
-    private bool garageCarSelectionActive;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => Instance = null;
@@ -44,35 +44,33 @@ public class MusicManager : MonoBehaviour
 
     private void Start()
     {
-        if (Instance == this && currentTrack < 0 && (inGarage || inRace)) NextTrack();
+        if (Instance == this && currentTrack < 0 && inRace) NextTrack();
     }
 
     private void OnSceneChanged(Scene previous, Scene current)
     {
-        inGarage = current.name == "Garage";
         inRace = current.name == "Touge01";
         racePaused = false;
-        garageCarSelectionActive = false;
-        if (!inGarage && !inRace) audioSource.Pause();
-        else if (currentTrack >= 0) audioSource.UnPause();
+        if (!inRace) audioSource.Stop();
+        else if (currentTrack >= 0) audioSource.Play();
         else NextTrack();
     }
 
     // Pause controller calls true on opening pause, false on resume/finish/exit.
     public void SetRacePaused(bool paused) => racePaused = paused;
-    public void SetGarageCarSelectionActive(bool active) => garageCarSelectionActive = active;
+    public void SetGarageCarSelectionActive(bool active) { } // Compatibility with GarageManager; garage music is disabled.
 
     private void Update()
     {
-        if (!(inGarage && !garageCarSelectionActive) && !(inRace && racePaused)) return;
-#if ENABLE_LEGACY_INPUT_MANAGER
-        if (Input.GetKeyDown(KeyCode.RightArrow)) NextTrack();
-        else if (Input.GetKeyDown(KeyCode.LeftArrow)) PrevTrack();
-#elif ENABLE_INPUT_SYSTEM
+        if (!(inRace && racePaused)) return;
+#if ENABLE_INPUT_SYSTEM
         Keyboard keyboard = Keyboard.current;
         if (keyboard == null) return;
         if (keyboard.rightArrowKey.wasPressedThisFrame) NextTrack();
         else if (keyboard.leftArrowKey.wasPressedThisFrame) PrevTrack();
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(KeyCode.RightArrow)) NextTrack();
+        else if (Input.GetKeyDown(KeyCode.LeftArrow)) PrevTrack();
 #endif
     }
 
@@ -89,7 +87,8 @@ public class MusicManager : MonoBehaviour
             if (tracks[candidate] == null) continue;
             currentTrack = candidate;
             audioSource.clip = tracks[currentTrack];
-            audioSource.Play();
+            if (inRace) audioSource.Play();
+            OnTrackChanged?.Invoke();
             return;
         }
     }
