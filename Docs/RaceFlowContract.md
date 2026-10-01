@@ -36,7 +36,7 @@ SaveResult: resultId, place (с 1), isNewRecord (очки строго боль�
 Выделенный корневой GameObject MusicManager в Garage: MusicManager + AudioSource; singleton DontDestroyOnLoad.
 tracks: AudioClip[] в порядке переключения. Пустые слоты пропускаются, пустой список безопасен. Каждый трек повторяется до ручного переключения.
 NextTrack()/PrevTrack() переключают циклически; кнопки вызывают эти методы.
-Клавиши RightArrow/LeftArrow разрешены в Garage и в Touge01 только при racePaused.
+Клавиши RightArrow/LeftArrow для музыки разрешены в Garage, пока GarageManager не включил режим выбора машин, и в Touge01 только при racePaused.
 Контроллер паузы обязан вызвать MusicManager.Instance.SetRacePaused(true) при открытии и false при продолжении/финише/выходе. При смене активной сцены флаг сбрасывается.
 Во время активной гонки Update выходит до чтения клавиатуры; нет поиска сцен, загрузки ресурсов или управляемых аллокаций каждый кадр.
 Поддерживается Legacy Input (KeyCode) и New Input System при отключённом Legacy.
@@ -52,3 +52,17 @@ Set уведомляет MusicVolumeChanged, Save сохраняет PlayerPrefs
 Финиш останавливает машину и показывает время, очки и НОВЫЙ РЕКОРД при isNewRecord.
 В ГАРАЖ загружает Garage, ИГРАТЬ перезапускает Touge01; Результаты открывает историю.
 Единственная настройка — громкость музыки.
+
+## Этап 3: гараж
+
+Assets/Scenes/Garage.unity — сцена 0; Assets/Scenes/Touge01.unity — сцена 1.
+GarageManager на GarageRoot: cars, carSpot, carNameText, musicManagerPrefab — serialized-ссылки.
+Canvas содержит Btn_PrevCar, Btn_NextCar, CarName_Text, Btn_Race. Button.OnClick связан соответственно с PrevCar, NextCar, Race.
+CarDefinition-ассеты: Assets/ScriptableObjects/Cars/ae86.asset и rmcar26.asset; используются готовые Assets/Prefabs/Toyota AE86 Sprinter Trueno Zenki.prefab и Assets/Prefabs/Car.prefab.
+В CarSpot создаётся только одно визуальное превью. Скрипты машины удаляются только с экземпляра превью, камеры/слушатели/звук/коллайдеры отключены, Rigidbody кинематический; исходные префабы не меняются.
+LeftArrow/RightArrow в Garage выбирают машину и не переключают музыку одновременно.
+Race сохраняет CarDefinition в SelectedCarService и асинхронно загружает Touge01; спавн машины на трассе — следующий этап.
+MusicManager уже присутствует в сцене. При его отсутствии GarageManager создаёт экземпляр из Assets/Prefabs/Systems/MusicManager.prefab (с сохранением назначенных треков).
+Assets/Audio/Music — папка для пользовательских треков; на момент генерации музыкальных клипов в проекте нет. Назначать Tracks в сцене и в префабе MusicManager для резервного создания.
+GarageSceneBuilder (Assets/Scripts/Editor): Xrace/Create Beta Garage; создаёт исходную сцену и отказывается перезаписывать существующий гараж.
+GarageSmokeCheck.Run — batch Play Mode проверка настоящих OnClick, смены превью, безопасности превью и загрузки Touge01 с сохранённым выбором.

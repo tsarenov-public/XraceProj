@@ -15,6 +15,7 @@ public class MusicManager : MonoBehaviour
     private bool inGarage;
     private bool inRace;
     private bool racePaused;
+    private bool garageCarSelectionActive;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetStatics() => Instance = null;
@@ -51,6 +52,7 @@ public class MusicManager : MonoBehaviour
         inGarage = current.name == "Garage";
         inRace = current.name == "Touge01";
         racePaused = false;
+        garageCarSelectionActive = false;
         if (!inGarage && !inRace) audioSource.Pause();
         else if (currentTrack >= 0) audioSource.UnPause();
         else NextTrack();
@@ -58,10 +60,11 @@ public class MusicManager : MonoBehaviour
 
     // Pause controller calls true on opening pause, false on resume/finish/exit.
     public void SetRacePaused(bool paused) => racePaused = paused;
+    public void SetGarageCarSelectionActive(bool active) => garageCarSelectionActive = active;
 
     private void Update()
     {
-        if (!inGarage && !(inRace && racePaused)) return;
+        if (!(inGarage && !garageCarSelectionActive) && !(inRace && racePaused)) return;
 #if ENABLE_LEGACY_INPUT_MANAGER
         if (Input.GetKeyDown(KeyCode.RightArrow)) NextTrack();
         else if (Input.GetKeyDown(KeyCode.LeftArrow)) PrevTrack();
