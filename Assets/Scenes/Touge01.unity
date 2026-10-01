@@ -15544,7 +15544,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 0
+  m_text: "\u0414\u0440\u0438\u0444\u0442: 0"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c4fb1c2ef20d6c74e844729287e28414, type: 2}
   m_sharedMaterial: {fileID: -8711049124040778886, guid: c4fb1c2ef20d6c74e844729287e28414, type: 2}
@@ -17867,6 +17867,7 @@ GameObject:
   - component: {fileID: 1877829669}
   - component: {fileID: 1877829668}
   - component: {fileID: 1877829667}
+  - component: {fileID: 1877829670}
   m_Layer: 0
   m_Name: RaceCanvas
   m_TagString: Untagged
@@ -17941,6 +17942,26 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1877829670
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1877829666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f98b383fced0ed4f93783f32dc0a3af, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RaceHUDController
+  session: {fileID: 1843974069}
+  timer: {fileID: 1843974071}
+  scorer: {fileID: 1843974067}
+  hudPanel: {fileID: 2080444219}
+  timeText: {fileID: 2024395894}
+  scoreText: {fileID: 1747697833}
+  multiplierText: {fileID: 994396096}
+  scorePrefix: "\u0414\u0440\u0438\u0444\u0442: "
 --- !u!1 &1878838158
 GameObject:
   m_ObjectHideFlags: 0
@@ -19643,23 +19664,18 @@ RectTransform:
   m_AnchoredPosition: {x: 40, y: -40}
   m_SizeDelta: {x: 500, y: 180}
   m_Pivot: {x: 0, y: 1}
---- !u!114 &2080444221
-MonoBehaviour:
+--- !u!225 &2080444221
+CanvasGroup:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2080444219}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7c5da15cd6c4e2441b8e8be43374f90a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RaceHud
-  timer: {fileID: 1843974071}
-  scorer: {fileID: 1843974067}
-  timeText: {fileID: 2024395894}
-  scoreText: {fileID: 1747697833}
-  multiplierText: {fileID: 994396096}
+  m_Alpha: 1
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!4 &2080584746 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4436382323992911654, guid: c85c29ca5825f41128fc045b4c397d4b, type: 3}
