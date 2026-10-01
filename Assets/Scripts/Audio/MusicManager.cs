@@ -57,7 +57,14 @@ public class MusicManager : MonoBehaviour
     }
 
     // Pause controller calls true on opening pause, false on resume/finish/exit.
-    public void SetRacePaused(bool paused) => racePaused = paused;
+    public void SetRacePaused(bool paused)
+    {
+        if (racePaused == paused) return;
+        racePaused = paused;
+        if (!inRace || audioSource == null || audioSource.clip == null) return;
+        if (paused) audioSource.Pause();
+        else audioSource.UnPause();
+    }
     public void SetGarageCarSelectionActive(bool active) { } // Compatibility with GarageManager; garage music is disabled.
 
     private void Update()
@@ -87,7 +94,12 @@ public class MusicManager : MonoBehaviour
             if (tracks[candidate] == null) continue;
             currentTrack = candidate;
             audioSource.clip = tracks[currentTrack];
-            if (inRace) audioSource.Play();
+            if (inRace)
+            {
+                audioSource.Play();
+                // Selecting a track in settings must keep it silent until Continue.
+                if (racePaused) audioSource.Pause();
+            }
             OnTrackChanged?.Invoke();
             return;
         }

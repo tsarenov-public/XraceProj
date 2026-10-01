@@ -15,10 +15,18 @@ public static class GarageSmokeCheck
 {
     private const string Key = "Xrace.GarageSmokeStep";
     private static int frames;
+    private static Material lensAsset;
+    private static Color lensColor;
+    private static bool alternateCar;
+    private static bool waitingAlternate;
     static GarageSmokeCheck() => EditorApplication.update += Tick;
 
     public static void Run()
     {
+        alternateCar = Environment.GetCommandLineArgs().Contains("-xrace-alternate-car");
+        waitingAlternate = false;
+        lensAsset = AssetDatabase.LoadAssetAtPath<Material>("Assets/Models/car/toyota-ae86-sprinter-trueno-zenki/materials/M_HeadlightLens.mat");
+        lensColor = lensAsset.GetColor("_EmissionColor");
         EditorSceneManager.OpenScene("Assets/Scenes/Garage.unity");
         SessionState.SetInt(Key, 1);
         SessionState.SetString(Key + "Deadline", DateTime.UtcNow.AddMinutes(3).ToString("O"));
@@ -37,13 +45,16 @@ public static class GarageSmokeCheck
             if (++frames < 15) return;
             frames = 0;
             Scene scene = SceneManager.GetActiveScene();
+            Debug.Log("XRACE_GARAGE_STEP " + step + ": " + scene.name);
             if (step == 4)
             {
                 if (scene.name != "Touge01") return;
-                Require(SelectedCarService.Get() != null && SelectedCarService.Get().carId == "ae86", "Selected car did not survive scene transition.");
+                Require(SelectedCarService.Get() != null && SelectedCarService.Get().carId == (alternateCar ? "rmcar26" : "ae86"), "Selected car did not survive scene transition.");
                 var raceSession=scene.GetRootGameObjects().Select(root=>root.GetComponent<RaceSessionManager>()).First(value=>value!=null);
                 Require(raceSession.CarBody!=null && raceSession.CarBody.GetComponentInParent<SpawnedRaceCar>()!=null,"Selected car was not spawned on track.");
                 Require(raceSession.GetComponent<CarSpawner>().Spawn()==raceSession.CarBody,"Repeated spawn created a second car.");
+                Require(raceSession.CarBody.GetComponent<VehicleHud>() != null && raceSession.CarBody.GetComponent<VehiclePresentation>() != null, "Spawned car presentation missing after Garage.");
+                Require(lensAsset.GetColor("_EmissionColor") == lensColor, "Vehicle lights modified the shared material asset.");
                 Debug.Log("XRACE_GARAGE_SMOKE_OK: initial preview, next, previous, safe preview, selected car and Touge01 load.");
                 SessionState.SetInt(Key, 0);
                 EditorApplication.Exit(0);
@@ -55,6 +66,8 @@ public static class GarageSmokeCheck
             TMP_Text name = roots.SelectMany(root => root.GetComponentsInChildren<TMP_Text>()).First(value => value.name == "CarName_Text");
             Button[] buttons = roots.SelectMany(root => root.GetComponentsInChildren<Button>()).ToArray();
             Require(MusicManager.Instance != null, "Music manager missing.");
+            Require(!MusicManager.Instance.GetComponent<AudioSource>().isPlaying, "Music playing in Garage.");
+            Require(buttons.First(b => b.name == "Btn_Race").interactable, "Race button disabled with a valid car.");
             GameObject preview = manager.GetComponentsInChildren<Transform>().First(value => value.name == "CarPreview").gameObject;
             Require(preview.activeInHierarchy, "Preview inactive.");
             Require(preview.GetComponentsInChildren<Renderer>().Length > 0, "Preview has no renderers.");
@@ -74,7 +87,14 @@ public static class GarageSmokeCheck
             }
             else
             {
-                Require(name.text == "Toyota AE86", "Previous button failed.");
+                if (alternateCar && !waitingAlternate)
+                {
+                    Require(name.text == "Toyota AE86", "Previous button failed.");
+                    buttons.First(button => button.name == "Btn_NextCar").onClick.Invoke();
+                    waitingAlternate = true;
+                    return; // Let preview safety initialization finish before the Race click.
+                }
+                Require(name.text == (alternateCar ? "RMCar26" : "Toyota AE86"), "Selected car label incorrect.");
                 buttons.First(button => button.name == "Btn_Race").onClick.Invoke();
             }
             SessionState.SetInt(Key, step + 1);

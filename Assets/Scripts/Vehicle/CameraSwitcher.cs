@@ -9,6 +9,7 @@ public class CameraSwitcher : MonoBehaviour
 
     private void Update()
     {
+        if (Time.timeScale <= 0f) return;
         for (int i = 0; i < keys.Length && i < cameras.Length; i++)
             if (Input.GetKeyDown(keys[i]))
                 Select(i);

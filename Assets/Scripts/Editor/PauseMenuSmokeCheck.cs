@@ -86,8 +86,8 @@ public static class PauseMenuSmokeCheck
                 timer = session.GetComponent<RaceTimer>(); music = MusicManager.Instance;
                 Require(music != null, "Direct Touge01 start has no music manager.");
                 Require(!Field<GameObject>(menu, "pausePanel").activeSelf && !Field<GameObject>(menu, "settingsPanel").activeSelf, "Panels initially visible.");
-                first = AudioClip.Create("Test Track A", 44100, 1, 44100, false);
-                second = AudioClip.Create("Test Track B", 44100, 1, 44100, false);
+                first = AudioClip.Create("Test Track A", 44100 * 60, 1, 44100, false);
+                second = AudioClip.Create("Test Track B", 44100 * 60, 1, 44100, false);
                 typeof(MusicManager).GetField("tracks", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(music, new[] { first, second });
                 music.NextTrack(); Require(music.CurrentTrack == first, "First track selection failed.");
                 var body = session.CarBody; body.GetComponent<WheelController>().enabled = false; body.useGravity = false; body.position += Vector3.up * 20; body.linearVelocity = body.transform.forward * 10;
@@ -107,11 +107,23 @@ public static class PauseMenuSmokeCheck
                 InputSystem.QueueStateEvent(Keyboard.current, new KeyboardState());
 #endif
                 Require(session.IsPaused && Time.timeScale == 0 && Field<GameObject>(menu, "pausePanel").activeSelf, "ESC did not pause.");
+                Require(!Field<Canvas>(session.CarBody.GetComponent<VehicleHud>(), "canvas").gameObject.activeSelf, "Vehicle HUD overlays pause.");
+                var wheels = session.CarBody.GetComponent<WheelController>();
+                typeof(WheelController).GetField("pendingShift", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(wheels, 1);
+                typeof(WheelController).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(wheels, null);
+                Require(Field<int>(wheels, "pendingShift") == 0, "Gear command survives pause.");
                 pausedAt = timer.TimeSeconds;
+                Require(!music.GetComponent<AudioSource>().isPlaying, "Music continued in pause.");
+                SessionState.SetInt(Key + "Sample", music.GetComponent<AudioSource>().timeSamples);
             }
             else if (step == 4)
             {
                 Require(timer.TimeSeconds == pausedAt, "Timer continued in pause.");
+                Require(music.GetComponent<AudioSource>().timeSamples == SessionState.GetInt(Key + "Sample", 0), "Paused track advanced.");
+                menu.Continue();
+                Require(music.GetComponent<AudioSource>().isPlaying, "Music did not resume.");
+                Require(music.GetComponent<AudioSource>().timeSamples == SessionState.GetInt(Key + "Sample", 0), "Continue restarted the track.");
+                menu.TogglePause();
                 menu.OpenSettings(); Require(Time.timeScale == 0 && Field<GameObject>(menu, "settingsPanel").activeSelf, "Settings unpaused race.");
                 Field<Slider>(menu, "musicVolumeSlider").value = 0.37f;
                 Require(Mathf.Approximately(music.GetComponent<AudioSource>().volume, 0.37f), "Music volume not applied.");
@@ -131,6 +143,7 @@ public static class PauseMenuSmokeCheck
                 InputSystem.QueueStateEvent(Keyboard.current, new KeyboardState());
 #endif
                 Require(music.CurrentTrack == second, "Left arrow did not change track.");
+                Require(!music.GetComponent<AudioSource>().isPlaying, "Track switching played music in pause.");
                 Require(Mathf.Approximately(Field<Slider>(menu, "musicVolumeSlider").value, 0.37f), "Arrow also changed volume slider.");
                 menu.SettingsBack(); Require(Field<GameObject>(menu, "pausePanel").activeSelf, "Back failed.");
                 menu.Continue(); Require(Time.timeScale == 1 && !session.IsPaused && !AudioListener.pause, "Continue failed.");
@@ -138,6 +151,14 @@ public static class PauseMenuSmokeCheck
             else if (step == 6)
             {
                 Require(timer.TimeSeconds > pausedAt, "Timer did not resume.");
+                Require(Field<Canvas>(session.CarBody.GetComponent<VehicleHud>(), "canvas").gameObject.activeSelf, "Vehicle HUD did not resume.");
+                menu.TogglePause();
+                menu.enabled = false;
+                Require(Time.timeScale == 1 && !session.IsPaused && !AudioListener.pause, "Disabling pause controller left the game frozen.");
+                menu.enabled = true;
+                menu.TogglePause();
+                Require(session.IsPaused, "Re-enabled controller did not pause.");
+                menu.Continue();
 #if ENABLE_INPUT_SYSTEM
                 Press(UnityEngine.InputSystem.Key.RightArrow, music);
 #endif

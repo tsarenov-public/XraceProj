@@ -8,6 +8,7 @@ public sealed class VehicleHud : MonoBehaviour
     private const float TachometerMaximumRpm = 9000f;
 
     public WheelController controller;
+    [SerializeField] private RaceSessionManager raceSession;
 
     private Canvas canvas;
     private Text speedText;
@@ -41,6 +42,7 @@ public sealed class VehicleHud : MonoBehaviour
 
     private void Update()
     {
+        if (!UpdateVisibility()) return;
         if (controller == null || speedText == null)
             return;
 
@@ -67,6 +69,29 @@ public sealed class VehicleHud : MonoBehaviour
         gauge.SetRpm(
             displayedRpm / TachometerMaximumRpm,
             controller.redlineRpm / TachometerMaximumRpm);
+    }
+
+    public void BindRaceSession(RaceSessionManager session)
+    {
+        raceSession = session;
+        UpdateVisibility();
+    }
+
+    private void OnEnable() => UpdateVisibility();
+
+    private void OnDisable()
+    {
+        // This canvas is a scene root, so disabling a replaced fallback car
+        // does not hide it through the car hierarchy automatically.
+        if (canvas != null) canvas.gameObject.SetActive(false);
+    }
+
+    private bool UpdateVisibility()
+    {
+        bool visible = isActiveAndEnabled && (raceSession == null
+            || !raceSession.IsPaused && raceSession.State != RaceSessionManager.RaceState.Finished);
+        if (canvas != null && canvas.gameObject.activeSelf != visible) canvas.gameObject.SetActive(visible);
+        return visible;
     }
 
     private void OnDestroy()

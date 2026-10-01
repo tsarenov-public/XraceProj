@@ -31,6 +31,7 @@ public static class PauseMenuEditorSetup
     [MenuItem("Xrace/Create Pause And Settings Panels")]
     public static void Apply()
     {
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         var scene = EditorSceneManager.OpenScene("Assets/Scenes/Touge01.unity");
         var roots = scene.GetRootGameObjects();
         var canvas = roots.Select(r => r.GetComponent<Canvas>()).First(c => c != null);

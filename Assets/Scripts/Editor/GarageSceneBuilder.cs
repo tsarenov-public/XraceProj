@@ -16,6 +16,7 @@ public static class GarageSceneBuilder
     [MenuItem("Xrace/Create Beta Garage")]
     public static void Build()
     {
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         if (File.Exists(ScenePath)) throw new InvalidOperationException("Garage already exists; preserve scene edits.");
         if (AssetDatabase.LoadAssetAtPath<TMP_Settings>("Assets/TextMesh Pro/Resources/TMP Settings.asset") == null)
         {
@@ -92,6 +93,7 @@ public static class GarageSceneBuilder
         var serialized = new SerializedObject(manager);
         serialized.FindProperty("carSpot").objectReferenceValue = spot;
         serialized.FindProperty("carNameText").objectReferenceValue = name;
+        serialized.FindProperty("raceButton").objectReferenceValue = race;
         serialized.FindProperty("musicManagerPrefab").objectReferenceValue = musicPrefab.GetComponent<MusicManager>();
         var carArray = serialized.FindProperty("cars");
         carArray.arraySize = cars.Length;
@@ -154,6 +156,7 @@ public static class GarageSceneBuilder
         button.transform.SetParent(parent, false);
         button.GetComponent<Image>().color = new Color(0.12f, 0.17f, 0.23f, 0.95f);
         button.targetGraphic = button.GetComponent<Image>();
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
         var text = Text("Label", button.transform, font, label, 38);
         text.rectTransform.anchorMin = Vector2.zero;
         text.rectTransform.anchorMax = Vector2.one;

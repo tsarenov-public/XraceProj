@@ -13,6 +13,7 @@ public static class RaceSceneBuilder
     [MenuItem("Xrace/Create Beta Race Core")]
     public static void Build()
     {
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         var scene = EditorSceneManager.OpenScene("Assets/Scenes/Touge01.unity");
         var roots = scene.GetRootGameObjects();
         if (roots.Any(root => root.name == "RaceRoot")) throw new InvalidOperationException("RaceRoot already exists; preserve manual edits.");

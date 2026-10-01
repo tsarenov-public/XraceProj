@@ -43,7 +43,7 @@ NextTrack()/PrevTrack() переключают циклически; кнопк�
 SettingsService.Load()/Save()/Get()/Set(float): PlayerPrefs MusicVolume, диапазон 0..1, default 0.8.
 Set уведомляет MusicVolumeChanged, Save сохраняет PlayerPrefs. MusicManager.SetVolume(float) делает оба вызова; подключить к Slider.OnValueChanged (Dynamic float), диапазон 0..1.
 При открытии настроек будущий UI устанавливает Slider через SetValueWithoutNotify(SettingsService.Get()).
-Музыка продолжает играть во время паузы. AudioSource настроен на 2D, loop и ignoreListenerPause.
+По последнему уточнению музыка останавливается на паузе через AudioSource.Pause и продолжается с той же позиции через UnPause. AudioSource 2D/loop; ignoreListenerPause используется только для явного управления паузой менеджером.
 
 ## Остальной бета-скоуп
 
@@ -115,8 +115,24 @@ PauseMenuController на RaceCanvas (вне скрываемых панелей)
 Pause_Panel: Btn_Continue, Btn_Settings, Btn_ExitGarage. Settings_Panel: MusicVolume_Slider (0..1), Btn_MusicPrev, Btn_MusicNext, TrackName_Text, Btn_SettingsBack. Обе панели изначально выключены.
 Кнопки привязаны к Continue/OpenSettings/ExitGarage/PrevTrack/NextTrack/SettingsBack; Slider.OnValueChanged Dynamic float -> SetMusicVolume.
 ESC переключает паузу только в Touge01, в Ready/Racing; после Finished игнорируется. Код не вызывает Application.Quit. New Input System приоритетен, Legacy KeyCode используется при отсутствии New Input System.
-Открытие: Time.timeScale=0, session.SetPaused(true), AudioListener.pause=true, курсор освобождается. Музыка ignoreListenerPause=true продолжает играть. Продолжение возвращает timeScale=1, звуки и прежнее состояние курсора.
+Открытие: Time.timeScale=0, session.SetPaused(true), AudioListener.pause=true, курсор освобождается. MusicManager явно ставит AudioSource на паузу, сохраняет позицию трека; при продолжении вызывает UnPause. Выбор трека в настройках остаётся без звука до продолжения. Продолжение возвращает timeScale=1, звуки и прежнее состояние курсора.
 Настройки не снимают паузу. Громкость загружается через SetValueWithoutNotify, изменение применяет SettingsService.Set/Save и AudioSource.volume. Стрелки листают треки через MusicManager; Navigation=None у слайдера/кнопок предотвращает двойное действие стрелок.
 При прямом запуске Touge01 менеджер создаётся из Assets/Prefabs/Systems/MusicManager.prefab; в Garage используется существующий менеджер. MusicManager в Garage является экземпляром этого префаба: настройте tracks один раз в префабе. Сейчас музыкальные клипы не добавлены; звуки машины не используются вместо музыки.
 Для оформления временно включите нужную панель вне Play Mode, меняйте RectTransform/TMP/Image, затем выключите обе панели и сохраните Touge01. Контроллер оставьте включённым на RaceCanvas.
 Editor: Xrace/Create Pause And Settings Panels создаёт начальную разметку; повторное создание блокируется, чтобы сохранить ручной дизайн. PauseMenuSmokeCheck.Run проверяет паузу, таймер, громкость, треки и переход в гараж, возвращает исходную пользовательскую громкость после теста.
+## Проверка и исправления перед бетой
+
+GarageManager содержит serialized raceButton: «В ГОНКУ» доступна при активном превью валидной машины/заполненных ссылках/наличии Touge01 в сборке; повторная загрузка защищена. Navigation=None у гаражных стрелок/кнопки гонки.
+CarSpawner валидирует Rigidbody до деактивации старой машины, использует fallback и очищает неверный выбранный CarDefinition, чтобы результат сохранял фактическую машину. Устанавливает существующие VehiclePresentation и VehicleHud после динамического спавна, HUD привязывается напрямую к raceSession.
+VehicleHud скрывается на паузе, финише и при отключении старой машины. RaceCanvas sortingOrder=200, выше Canvas спидометра.
+WheelController не читает управление/передачи в паузе; очередь переключений очищается. Фары и камеры также не реагируют на меню. Физические параметры автомобиля не изменены.
+PopupHeadlights использует отдельный материал только для слотов линз своей машины; исходный M_HeadlightLens.mat больше не меняется в Play Mode.
+VehicleDriftStateAdapter безопасен до Bind/при удалённых ссылках, не начисляет дрифт задним ходом.
+PauseMenuController проверяет ссылки и размещение вне панелей; при отключении компонента снимает паузу и подписки. На финише меню не открывается; ESC не закрывает приложение.
+Editor creation tools предлагают сохранить несохранённые ручные сцены перед переключением (в интерактивном Editor). RenderPreview финиша разрешён только в batch mode.
+BetaSceneRepair.ApplyAndValidate обновляет только необходимые ссылки/порядок UI/placeholder, сохраняет оформление, затем запускает BetaValidationCheck.Run.
+BetaValidationCheck проверяет сцены/ссылки/кнопки/build/input/зоны и JSON/сортировку/рекорды с резервным сохранением исходной истории. RaceCoreSmokeCheck отключает FinishPanelController для тестового финиша и не пишет тестовый заезд в историю. FinishPanelSmokeCheck сохраняет и восстанавливает исходный JSON. PauseMenuSmokeCheck проверяет isPlaying/timeSamples при паузе, продолжении и переключении треков в паузе.
+
+Перед показом остаются ручная проверка ощущения дрифта/зон и поведения на Mac, добавление собственных клипов в prefab MusicManager. В существующей геометрии трассы Unity сообщает о BoxCollider с отрицательным масштабом у некоторых отбойников; автоматические тесты ядра не заменяют проверку столкновений на дороге.
+
+Итоговый регрессионный прогон: BetaValidationCheck, GarageSmokeCheck для AE86 и RMCar26 (включая запуск с рендером), RaceCoreSmokeCheck, FinishPanelSmokeCheck и PauseMenuSmokeCheck прошли. Проверка Mac-сборки и ручное вождение не выполнены на этом Windows-хосте.

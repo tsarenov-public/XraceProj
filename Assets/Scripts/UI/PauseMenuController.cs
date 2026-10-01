@@ -18,9 +18,25 @@ public class PauseMenuController : MonoBehaviour
     private MusicManager music;
     private bool paused;
     private bool leaving;
+    private bool initialized;
+    private bool subscribed;
     private CursorLockMode previousCursorLock;
     private bool previousCursorVisible;
 
+    private void Awake()
+    {
+        if (session == null || pausePanel == null || settingsPanel == null || musicVolumeSlider == null)
+        {
+            Debug.LogError("PauseMenuController: assign session, both panels and volume slider.", this);
+            enabled = false;
+            return;
+        }
+        if (transform.IsChildOf(pausePanel.transform) || transform.IsChildOf(settingsPanel.transform))
+        {
+            Debug.LogError("PauseMenuController must be on the active Canvas, outside its panels.", this);
+            enabled = false;
+        }
+    }
     private void Start()
     {
         Time.timeScale = 1;
@@ -29,11 +45,22 @@ public class PauseMenuController : MonoBehaviour
         settingsPanel.SetActive(false);
         if (MusicManager.Instance == null && musicManagerPrefab != null) Instantiate(musicManagerPrefab);
         music = MusicManager.Instance;
-        if (music != null) music.OnTrackChanged += RefreshTrack;
         session.SetPaused(false);
-        session.OnStateChanged += OnRaceStateChanged;
+        initialized = true;
+        Subscribe();
         musicVolumeSlider.SetValueWithoutNotify(SettingsService.Get());
         RefreshTrack();
+    }
+    private void OnEnable()
+    {
+        if (initialized) { Subscribe(); RefreshTrack(); }
+    }
+    private void Subscribe()
+    {
+        if (subscribed) return;
+        session.OnStateChanged += OnRaceStateChanged;
+        if (music != null) music.OnTrackChanged += RefreshTrack;
+        subscribed = true;
     }
     private void Update()
     {
@@ -46,7 +73,7 @@ public class PauseMenuController : MonoBehaviour
     }
     public void TogglePause()
     {
-        if (leaving || session.State == RaceSessionManager.RaceState.Finished) return;
+        if (!initialized || !isActiveAndEnabled || gameObject.scene.name != "Touge01" || leaving || session.State == RaceSessionManager.RaceState.Finished) return;
         if (paused) Continue();
         else
         {
@@ -64,11 +91,13 @@ public class PauseMenuController : MonoBehaviour
     }
     public void Continue()
     {
+        if (!initialized) return;
         bool wasPaused = paused;
         paused = false;
-        pausePanel.SetActive(false);
-        settingsPanel.SetActive(false);
-        session.SetPaused(false);
+        if (pausePanel != null) pausePanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false);
+        if (session != null) session.SetPaused(false);
+        else if (MusicManager.Instance != null) MusicManager.Instance.SetRacePaused(false);
         Time.timeScale = 1;
         AudioListener.pause = false;
         if (wasPaused)
@@ -93,18 +122,21 @@ public class PauseMenuController : MonoBehaviour
     }
     public void SetMusicVolume(float volume)
     {
+        if (!initialized || leaving) return;
         if (music != null) music.SetVolume(volume);
         else { SettingsService.Set(volume); SettingsService.Save(); }
     }
-    public void NextTrack() { if (music != null) music.NextTrack(); }
-    public void PrevTrack() { if (music != null) music.PrevTrack(); }
+    public void NextTrack() { if (paused && !leaving && music != null) music.NextTrack(); }
+    public void PrevTrack() { if (paused && !leaving && music != null) music.PrevTrack(); }
     private void RefreshTrack()
     {
-        if (trackNameText != null) trackNameText.text = music != null && music.CurrentTrack != null ? music.CurrentTrack.name : "Добавьте музыкальные треки";
+        if (trackNameText != null) trackNameText.text = music != null && music.CurrentTrack != null ? music.CurrentTrack.name : "Нет треков";
     }
     public void ExitGarage()
     {
-        if (leaving) return;
+        if (!initialized || leaving) return;
+        if (!Application.CanStreamedLevelBeLoaded("Garage"))
+        { Debug.LogError("Garage is missing from Build Settings.", this); return; }
         leaving = true;
         Continue();
         Cursor.lockState = CursorLockMode.None;
@@ -115,15 +147,13 @@ public class PauseMenuController : MonoBehaviour
     {
         if (state == RaceSessionManager.RaceState.Finished) Continue();
     }
-    private void OnDestroy()
+    private void OnDisable()
     {
+        if (!initialized) return;
         if (session != null) session.OnStateChanged -= OnRaceStateChanged;
         if (music != null) music.OnTrackChanged -= RefreshTrack;
-        if (paused)
-        {
-            Time.timeScale = 1;
-            AudioListener.pause = false;
-            if (MusicManager.Instance != null) MusicManager.Instance.SetRacePaused(false);
-        }
+        subscribed = false;
+        // Disabling the controller in Inspector must not leave a frozen race.
+        if (paused) Continue();
     }
 }

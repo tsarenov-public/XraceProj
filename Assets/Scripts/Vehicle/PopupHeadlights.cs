@@ -35,9 +35,12 @@ public class PopupHeadlights : MonoBehaviour
 
     private float openAmount;
     private float lastLensAmount = -1f;                     // кэш: пишем только по смене
+    private Material runtimeLens;
+    private Renderer[] lensRenderers;
 
     private void Awake()
     {
+        CreateRuntimeLens();
         IsLowBeamOn = startRaised;
         IsRaised = IsLowBeamOn;
         openAmount = IsRaised ? 1f : 0f;
@@ -46,6 +49,7 @@ public class PopupHeadlights : MonoBehaviour
 
     private void Update()
     {
+        if (Time.timeScale <= 0f) return;
         if (Input.GetKeyDown(toggleKey))
             IsLowBeamOn = !IsLowBeamOn;
         if (Input.GetKeyDown(highBeamKey))
@@ -80,11 +84,53 @@ public class PopupHeadlights : MonoBehaviour
         UpdateLight(rightLight, smoothAmount);
 
         // линзы: пишем цвет только пока значение реально меняется
-        if (headlightLens != null && smoothAmount != lastLensAmount)
+        if (runtimeLens != null && smoothAmount != lastLensAmount)
         {
-            headlightLens.SetColor(EmissionColor, LensWarm * smoothAmount);
+            runtimeLens.SetColor(EmissionColor, LensWarm * smoothAmount);
             lastLensAmount = smoothAmount;
         }
+    }
+
+    private void CreateRuntimeLens()
+    {
+        if (headlightLens == null) return;
+        runtimeLens = new Material(headlightLens) { name = headlightLens.name + " (Runtime)", hideFlags = HideFlags.DontSave };
+        lensRenderers = GetComponentsInChildren<Renderer>(true);
+        foreach (Renderer renderer in lensRenderers)
+        {
+            Material[] materials = renderer.sharedMaterials;
+            bool changed = false;
+            for (int i = 0; i < materials.Length; i++)
+            {
+                if (materials[i] != headlightLens) continue;
+                materials[i] = runtimeLens;
+                changed = true;
+            }
+            if (changed) renderer.sharedMaterials = materials;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (runtimeLens == null) return;
+        // Also keep renderers valid when only this component is removed.
+        if (lensRenderers != null)
+        {
+            foreach (Renderer renderer in lensRenderers)
+            {
+                if (renderer == null) continue;
+                Material[] materials = renderer.sharedMaterials;
+                bool changed = false;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    if (materials[i] != runtimeLens) continue;
+                    materials[i] = headlightLens;
+                    changed = true;
+                }
+                if (changed) renderer.sharedMaterials = materials;
+            }
+        }
+        Destroy(runtimeLens);
     }
 
     private void UpdateLight(Light lamp, float amount)

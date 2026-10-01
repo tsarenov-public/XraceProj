@@ -10,6 +10,7 @@ public static class RaceHUDEditorSetup
     [MenuItem("Xrace/Upgrade Race HUD")]
     public static void Apply()
     {
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         var scene = EditorSceneManager.OpenScene("Assets/Scenes/Touge01.unity");
         var roots = scene.GetRootGameObjects();
         var texts = roots.SelectMany(r => r.GetComponentsInChildren<TMP_Text>(true)).ToArray();

@@ -174,6 +174,19 @@ public class WheelController : MonoBehaviour
 
     private void Update()
     {
+        // Update keeps running while physics is paused. Ignore menu input so a
+        // gear key pressed in settings cannot queue a shift for Resume.
+        if (Time.timeScale <= 0f)
+        {
+            rawSteerInput = 0f;
+            Vertical = 0f;
+            ThrottleInput = 0f;
+            BrakeInput = 0f;
+            IsHandbraking = false;
+            pendingShift = 0;
+            return;
+        }
+
         rawSteerInput = Input.GetAxisRaw("Horizontal");
         Vertical = Input.GetAxisRaw("Vertical");
         ThrottleInput = Mathf.Clamp01(Vertical);

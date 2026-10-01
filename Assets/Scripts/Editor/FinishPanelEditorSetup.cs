@@ -15,6 +15,8 @@ public static class FinishPanelEditorSetup
 {
     public static void RenderPreview()
     {
+        // This helper changes the open scene temporarily; batch exit discards it.
+        if (!Application.isBatchMode) throw new InvalidOperationException("RenderPreview is batch-only; preserve the open scene layout.");
         var scene=EditorSceneManager.OpenScene("Assets/Scenes/Touge01.unity");
         var roots=scene.GetRootGameObjects();var canvas=roots.Select(r=>r.GetComponent<Canvas>()).First(c=>c!=null);
         var texts=canvas.GetComponentsInChildren<TMP_Text>(true);
@@ -34,6 +36,7 @@ public static class FinishPanelEditorSetup
     [MenuItem("Xrace/Create Finish Panel")]
     public static void Apply()
     {
+        if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
         var scene=EditorSceneManager.OpenScene("Assets/Scenes/Touge01.unity");
         var roots=scene.GetRootGameObjects();
         var canvas=roots.Select(r=>r.GetComponent<Canvas>()).First(c=>c!=null);

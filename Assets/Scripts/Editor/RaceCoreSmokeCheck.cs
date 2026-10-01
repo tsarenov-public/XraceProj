@@ -51,6 +51,10 @@ public static class RaceCoreSmokeCheck
             {
                 var roots=SceneManager.GetActiveScene().GetRootGameObjects();
                 session=roots.Select(r=>r.GetComponent<RaceSessionManager>()).First(v=>v!=null);
+                // This check fabricates drift scores. Keep the real player's history intact;
+                // persistence is exercised separately by FinishPanelSmokeCheck.
+                foreach (var finishUi in roots.SelectMany(r => r.GetComponentsInChildren<FinishPanelController>(true)))
+                    finishUi.enabled = false;
                 timer=session.GetComponent<RaceTimer>();scorer=session.GetComponent<DriftScorer>();
                 var texts=roots.SelectMany(r=>r.GetComponentsInChildren<TMP_Text>(true)).ToArray();
                 hudTime=texts.First(t=>t.name=="Time_Text");hudScore=texts.First(t=>t.name=="Score_Text");hudMultiplier=texts.First(t=>t.name=="Multiplier_Text");hudPanel=hudTime.transform.parent.gameObject;

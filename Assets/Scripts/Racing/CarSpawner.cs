@@ -15,16 +15,23 @@ public class CarSpawner : MonoBehaviour
         if (startSpawn == null || session == null) { Debug.LogError("CarSpawner: missing StartSpawn/session.", this); return null; }
         if (session.CarBody != null) return spawnedBody = session.CarBody;
         CarDefinition selected = SelectedCarService.Get();
-        if (selected != null && selected.carPrefab != null)
+        bool validPrefab = selected != null && selected.carPrefab != null
+            && selected.carPrefab.GetComponentInChildren<Rigidbody>(true) != null;
+        if (selected != null && selected.carPrefab != null && !validPrefab)
+            Debug.LogError("Selected car prefab has no Rigidbody; using the assigned fallback car.", this);
+        if (validPrefab)
         {
-            foreach (var existing in sceneVehicleObjects) if (existing != null) existing.SetActive(false);
+            if (sceneVehicleObjects != null)
+                foreach (var existing in sceneVehicleObjects) if (existing != null) existing.SetActive(false);
             var car = Instantiate(selected.carPrefab, startSpawn.position, startSpawn.rotation);
-            spawnedBody = car.GetComponentInChildren<Rigidbody>();
+            spawnedBody = car.GetComponentInChildren<Rigidbody>(true);
             if (spawnedBody == null) { Destroy(car); Debug.LogError("Selected car prefab has no Rigidbody.", this); return null; }
-            car.AddComponent<SpawnedRaceCar>();
+            if (car.GetComponent<SpawnedRaceCar>() == null) car.AddComponent<SpawnedRaceCar>();
         }
         else
         {
+            // Result metadata must describe the fallback actually being driven.
+            if (selected != null) SelectedCarService.Clear();
             spawnedBody = fallbackCar;
             if (spawnedBody == null) { Debug.LogError("Choose a car in Garage or assign the fallback car.", this); return null; }
             spawnedBody.gameObject.SetActive(true);
@@ -34,6 +41,15 @@ public class CarSpawner : MonoBehaviour
         }
         if (!spawnedBody.isKinematic) { spawnedBody.linearVelocity = Vector3.zero; spawnedBody.angularVelocity = Vector3.zero; }
         session.BindCar(spawnedBody);
+        // RuntimeInitializeOnLoadMethod runs only for the first scene. A car
+        // created after leaving Garage needs its presentation installed here.
+        if (spawnedBody.GetComponent<WheelController>() != null)
+        {
+            if (spawnedBody.GetComponent<VehiclePresentation>() == null) spawnedBody.gameObject.AddComponent<VehiclePresentation>();
+            var vehicleHud = spawnedBody.GetComponent<VehicleHud>();
+            if (vehicleHud == null) vehicleHud = spawnedBody.gameObject.AddComponent<VehicleHud>();
+            vehicleHud.BindRaceSession(session);
+        }
         return spawnedBody;
     }
 }

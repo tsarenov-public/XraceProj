@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
@@ -10,6 +11,7 @@ public class GarageManager : MonoBehaviour
     [SerializeField] private CarDefinition[] cars;
     [SerializeField] private Transform carSpot;
     [SerializeField] private TMP_Text carNameText;
+    [SerializeField] private Button raceButton;
     [SerializeField] private MusicManager musicManagerPrefab;
     private GameObject preview;
     private int selectedIndex;
@@ -17,6 +19,7 @@ public class GarageManager : MonoBehaviour
 
     private void Start()
     {
+        if (raceButton != null) raceButton.interactable = false;
         Time.timeScale = 1f;
         AudioListener.pause = false;
         if (MusicManager.Instance == null)
@@ -73,10 +76,12 @@ public class GarageManager : MonoBehaviour
     private void ShowPreview()
     {
         if (preview != null) { preview.SetActive(false); Destroy(preview); }
-        if (!IsValid(selectedIndex) || carSpot == null)
+        preview = null;
+        UpdateRaceButton();
+        if (!IsValid(selectedIndex) || carSpot == null || carNameText == null || raceButton == null)
         {
             if (carNameText != null) carNameText.text = "НЕТ МАШИН";
-            Debug.LogError("GarageManager: assign CarSpot and at least one CarDefinition with a prefab.", this);
+            Debug.LogError("GarageManager: assign CarSpot, CarName_Text, Btn_Race and at least one CarDefinition with a prefab.", this);
             return;
         }
         CarDefinition car = cars[selectedIndex];
@@ -104,16 +109,30 @@ public class GarageManager : MonoBehaviour
     private System.Collections.IEnumerator ActivatePreview(GameObject target)
     {
         yield return null;
-        if (target != null && target == preview) target.SetActive(true);
+        if (target != null && target == preview)
+        {
+            target.SetActive(true);
+            UpdateRaceButton();
+        }
+    }
+
+    private bool HasReadyPreview() => IsValid(selectedIndex) && carSpot != null && carNameText != null &&
+        raceButton != null && preview != null && preview.activeInHierarchy;
+
+    private void UpdateRaceButton()
+    {
+        if (raceButton != null)
+            raceButton.interactable = !loading && HasReadyPreview() && Application.CanStreamedLevelBeLoaded("Touge01");
     }
 
     public void Race()
     {
-        if (loading || !IsValid(selectedIndex)) return;
+        if (loading || !HasReadyPreview()) return;
         if (!Application.CanStreamedLevelBeLoaded("Touge01"))
         { Debug.LogError("Add Touge01 to the active Build Profile scene list.", this); return; }
         SelectedCarService.Set(cars[selectedIndex]);
         loading = true;
+        UpdateRaceButton();
         SceneManager.LoadSceneAsync("Touge01");
     }
 }
