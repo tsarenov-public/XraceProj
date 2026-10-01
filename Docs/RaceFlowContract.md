@@ -9,7 +9,7 @@
 - RaceRoot, StartSpawn (311, 152, -156), FinishTrigger (-372, 40, 190).
 - DriftZones/DriftZone_01, DriftZone_02, ...
 - HUD_Panel: Time_Text, Score_Text, Multiplier_Text.
-- Finish_Panel: FinishTime_Text, FinishScore_Text, Record_Text, Btn_Garage, Btn_Retry, Btn_Results.
+- Finish_Panel: FinishTime_Text, FinishScore_Text, Record_Text, Btn_Garage, Btn_Retry. По уточнению этапа 6 таблица результатов не требуется в бете.
 - Pause_Panel: Btn_Continue, Btn_Settings, Btn_ExitGarage.
 - Settings_Panel: MusicVolume_Slider, Btn_MusicPrev, Btn_MusicNext, Btn_SettingsBack.
 
@@ -50,7 +50,7 @@ Set уведомляет MusicVolumeChanged, Save сохраняет PlayerPrefs
 Без отсчёта. Таймер и дрифт стартуют при скорости выше порога; пауза останавливает таймер.
 Последовательные повороты с дрифтом повышают множитель; поворот без дрифта сбрасывает до x1, накопленные очки сохраняются.
 Финиш останавливает машину и показывает время, очки и НОВЫЙ РЕКОРД при isNewRecord.
-В ГАРАЖ загружает Garage, ИГРАТЬ перезапускает Touge01; Результаты открывает историю.
+В ГАРАЖ загружает Garage, ИГРАТЬ перезапускает Touge01. По уточнению этапа 6 таблица результатов в бете отсутствует.
 Единственная настройка — громкость музыки.
 
 ## Этап 3: гараж
@@ -95,3 +95,16 @@ RaceTimer.OnTimeChanged(float timeSeconds) вызывается при изме�
 HUD_Panel активна в Ready/Racing, скрыта в Finished. Контроллер остаётся включён на Canvas; HUD CanvasGroup не блокирует raycasts, тексты не перехватывают клики.
 Расположение, размеры, шрифт, цвет и выравнивание TMP контроллер не меняет. Score Prefix в инспекторе (по умолчанию «Дрифт: ») задаёт подпись перед очками; менять вне Play Mode. Поля Text заполняются данными во время игры.
 RaceHUDEditorSetup (Assets/Scripts/Editor), меню Xrace/Upgrade Race HUD, настраивает ссылки в существующем HUD, сохраняя RectTransform и оформление.
+
+## Этап 6: финишное окно
+
+FinishPanelController на RaceCanvas, вне Finish_Panel. Serialized: session/timer/scorer (RaceRoot), fallbackCar (ae86.asset для прямого запуска сцены), finishPanel, finishTimeText, finishScoreText, recordText, saveStatusText, garageButton, retryButton.
+Finish_Panel и Record_Text сохранены неактивными; панель показывается только при Finished. Время mm:ss.fff, очки «Дрифт: N», Record_Text «НОВЫЙ РЕКОРД» показывается только после успешной записи со строго большим driftScore.
+В обработчике Finished ровно один раз создаётся GUID, UTC ISO 8601 дата, сохраняются машина из SelectedCarService (резервно — fallbackCar), время, очки, maxMultiplier через ResultsRepository.SaveNewEntry. Повторный финиш/повторное включение UI не создают дубликат.
+LastResult, SavedResult, SaveSucceeded доступны для проверки. Ошибки хранения отображаются в SaveStatus_Text, рекорд при ошибке скрыт; кнопки доступны независимо от сохранения.
+Btn_Garage.OnClick -> FinishPanelController.GoGarage(); Btn_Retry.OnClick -> Retry(). Перед загрузкой Time.timeScale=1, AudioListener.pause=false, SetPaused(false), повторные клики блокируются. Выбор машины сохраняется для перезапуска.
+Финишное окно не ставит Time.timeScale=0: машина успевает затормозить за 0.75 сек, таймер уже остановлен состоянием Finished.
+RaceCanvas содержит GraphicRaycaster, в сцене создан EventSystem с InputSystemUIInputModule. Фон финиша перехватывает клики; TMP-тексты RaycastTarget=false.
+Оформление редактируется RectTransform/TMP/Button/Image в Unity. Контроллер не меняет размеры, позиции, цвета и шрифты. FinishPanelEditorSetup создаёт панель один раз и отказывается перезаписывать существующую.
+FinishPanelSmokeCheck проверяет три заезда (рекорд/равенство/новый рекорд), сохранение один раз, значения текстов, две перезагрузки и возврат в Garage. Исходная история временно переносится в резервный файл и восстанавливается после проверки.
+Таблица результатов, кнопка результатов и зависимость от таблицы отсутствуют по уточнению этапа 6. Следующий шаг — пауза и настройки громкости.
