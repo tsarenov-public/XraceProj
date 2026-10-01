@@ -21095,6 +21095,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CarSpawner
   startSpawn: {fileID: 1534067793}
   fallbackCar: {fileID: 1790603830}
+  roadSurface: {fileID: 355688899}
   sceneVehicleObjects:
   - {fileID: 1790603831}
   - {fileID: 1879735473}

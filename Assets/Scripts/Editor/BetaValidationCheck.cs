@@ -23,6 +23,9 @@ public static class BetaValidationCheck
             buildScenes[1].path == "Assets/Scenes/Touge01.unity", "Build scenes must be Garage (0), Touge01 (1).");
         var input = Regex.Match(File.ReadAllText("ProjectSettings/ProjectSettings.asset"), @"(?m)^\s*activeInputHandler:\s*(\d+)");
         Require(input.Success && input.Groups[1].Value == "2", "Both input systems must remain enabled for existing vehicle controls.");
+        var desktopPipeline = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset>("Assets/Settings/PC_RPAsset.asset");
+        Require(desktopPipeline != null && new SerializedObject(desktopPipeline).FindProperty("m_GPUResidentDrawerMode").intValue == 0,
+            "GPU Resident Drawer must stay disabled for this beta: native ObjectDispatcher crash reproduced during scene changes.");
         InspectScene("Assets/Scenes/Garage.unity", ValidateGarage);
         InspectScene("Assets/Scenes/Touge01.unity", ValidateRace);
         ValidateRepository();
@@ -83,7 +86,7 @@ public static class BetaValidationCheck
         var session = Single<RaceSessionManager>(roots);
         References(session, "timer", "driftState", "scorer", "stopper");
         var spawner = Single<CarSpawner>(roots);
-        References(spawner, "startSpawn", "fallbackCar", "session");
+        References(spawner, "startSpawn", "fallbackCar", "session", "roadSurface");
         var start = (Transform)new SerializedObject(spawner).FindProperty("startSpawn").objectReferenceValue;
         Require(Vector3.Distance(start.position, new Vector3(311, 152, -156)) < 0.01f, "StartSpawn coordinates changed.");
         References(Single<RaceTimer>(roots), "session");

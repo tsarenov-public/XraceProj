@@ -2,6 +2,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using System.Collections.Generic;
 #if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine.InputSystem;
 #endif
@@ -13,9 +15,18 @@ public class GarageManager : MonoBehaviour
     [SerializeField] private TMP_Text carNameText;
     [SerializeField] private Button raceButton;
     [SerializeField] private MusicManager musicManagerPrefab;
+    [Header("Preview rotation (local X axis only)")]
+    [SerializeField] private bool allowPreviewRotation = true;
+    [SerializeField, Min(0.01f)] private float previewRotationDegreesPerPixel = 0.35f;
     private GameObject preview;
     private int selectedIndex;
     private bool loading;
+    private bool draggingPreview;
+    private Vector2 previousPointerPosition;
+    private float previewAngleDegrees;
+    private PointerEventData pointerEvent;
+    private EventSystem pointerEventSystem;
+    private readonly List<RaycastResult> uiHits = new List<RaycastResult>(8);
 
     private void Start()
     {
@@ -44,11 +55,72 @@ public class GarageManager : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.RightArrow)) NextCar();
 #elif ENABLE_INPUT_SYSTEM
         Keyboard keyboard = Keyboard.current;
-        if (keyboard == null) return;
-        if (keyboard.leftArrowKey.wasPressedThisFrame) PrevCar();
-        else if (keyboard.rightArrowKey.wasPressedThisFrame) NextCar();
+        if (keyboard != null)
+        {
+            if (keyboard.leftArrowKey.wasPressedThisFrame) PrevCar();
+            else if (keyboard.rightArrowKey.wasPressedThisFrame) NextCar();
+        }
+#endif
+        UpdatePreviewRotation();
+    }
+
+    private void UpdatePreviewRotation()
+    {
+        if (!allowPreviewRotation || !HasReadyPreview()) { draggingPreview = false; return; }
+        Vector2 position;
+        bool pressed;
+        bool held;
+#if ENABLE_LEGACY_INPUT_MANAGER
+        position = Input.mousePosition;
+        pressed = Input.GetMouseButtonDown(0);
+        held = Input.GetMouseButton(0);
+#elif ENABLE_INPUT_SYSTEM
+        Mouse mouse = Mouse.current;
+        if (mouse == null) { draggingPreview = false; return; }
+        position = mouse.position.ReadValue();
+        pressed = mouse.leftButton.wasPressedThisFrame;
+        held = mouse.leftButton.isPressed;
+#else
+        return;
+#endif
+#if ENABLE_LEGACY_INPUT_MANAGER || ENABLE_INPUT_SYSTEM
+        if (pressed)
+        {
+            draggingPreview = !IsPointerOverUi(position);
+            previousPointerPosition = position;
+        }
+        if (!held) { draggingPreview = false; return; }
+        if (!draggingPreview) return;
+        ApplyPreviewRotation(position.x - previousPointerPosition.x);
+        previousPointerPosition = position;
 #endif
     }
+
+    private bool IsPointerOverUi(Vector2 position)
+    {
+        EventSystem events = EventSystem.current;
+        if (events == null) return false;
+        if (pointerEvent == null || pointerEventSystem != events)
+        {
+            pointerEventSystem = events;
+            pointerEvent = new PointerEventData(events);
+        }
+        pointerEvent.Reset();
+        pointerEvent.position = position;
+        uiHits.Clear();
+        events.RaycastAll(pointerEvent, uiHits);
+        return uiHits.Count > 0;
+    }
+
+    private void ApplyPreviewRotation(float horizontalPixels)
+    {
+        if (!allowPreviewRotation || loading || !HasReadyPreview()) return;
+        previewAngleDegrees = Mathf.Repeat(previewAngleDegrees + horizontalPixels * previewRotationDegreesPerPixel, 360f);
+        // Rotate the preview pivot only: CarSpot, position, scale and the source prefab stay unchanged.
+        preview.transform.localRotation = Quaternion.AngleAxis(previewAngleDegrees, Vector3.right);
+    }
+
+    private void OnDisable() => draggingPreview = false;
 
     public void PrevCar() => ChangeCar(-1);
     public void NextCar() => ChangeCar(1);
@@ -77,6 +149,8 @@ public class GarageManager : MonoBehaviour
     {
         if (preview != null) { preview.SetActive(false); Destroy(preview); }
         preview = null;
+        draggingPreview = false;
+        previewAngleDegrees = 0f;
         UpdateRaceButton();
         if (!IsValid(selectedIndex) || carSpot == null || carNameText == null || raceButton == null)
         {
@@ -86,34 +160,10 @@ public class GarageManager : MonoBehaviour
         }
         CarDefinition car = cars[selectedIndex];
         if (carNameText != null) carNameText.text = car.displayName;
-        // Inactive parent prevents vehicle Awake/OnEnable from starting engine, cameras or input.
-        preview = new GameObject("CarPreview");
-        preview.SetActive(false);
-        preview.transform.SetParent(carSpot, false);
-        GameObject model = Instantiate(car.carPrefab, preview.transform, false);
-        model.transform.localPosition = Vector3.zero;
-        model.transform.localRotation = Quaternion.identity;
-        foreach (MonoBehaviour behaviour in model.GetComponentsInChildren<MonoBehaviour>(true))
-            Destroy(behaviour);
-        foreach (Camera camera in model.GetComponentsInChildren<Camera>(true)) camera.enabled = false;
-        foreach (AudioListener listener in model.GetComponentsInChildren<AudioListener>(true)) listener.enabled = false;
-        foreach (AudioSource source in model.GetComponentsInChildren<AudioSource>(true))
-        { source.playOnAwake = false; source.enabled = false; }
-        foreach (Rigidbody body in model.GetComponentsInChildren<Rigidbody>(true))
-        { body.isKinematic = true; body.detectCollisions = false; }
-        foreach (Collider collider in model.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
-        // Destroy completes at the end of this frame, before activating the visual preview.
-        StartCoroutine(ActivatePreview(preview));
-    }
-
-    private System.Collections.IEnumerator ActivatePreview(GameObject target)
-    {
-        yield return null;
-        if (target != null && target == preview)
-        {
-            target.SetActive(true);
-            UpdateRaceButton();
-        }
+        // Copy visuals only. No vehicle Awake/OnDestroy, native wheel physics or particle playOnAwake
+        // is involved, even when returning to the garage after finishing a race.
+        preview = GaragePreviewBuilder.Create(car.carPrefab, carSpot, "CarPreview");
+        UpdateRaceButton();
     }
 
     private bool HasReadyPreview() => IsValid(selectedIndex) && carSpot != null && carNameText != null &&

@@ -14,16 +14,19 @@ public class DriftZone : MonoBehaviour
     public float MinSpeedKmh => minSpeedKmh;
     private void OnTriggerEnter(Collider other)
     {
+        if (!isActiveAndEnabled || other == null || session == null || scorer == null || !session.isActiveAndEnabled || !scorer.isActiveAndEnabled) return;
         if (other.attachedRigidbody == null || other.attachedRigidbody != session.CarBody) return;
         if (contacts.Add(other) && contacts.Count == 1) scorer.EnterZone(this);
     }
     private void OnTriggerExit(Collider other)
     {
-        if (contacts.Remove(other) && contacts.Count == 0) scorer.ExitZone(this);
+        if (!contacts.Remove(other) || contacts.Count != 0 || scorer == null) return;
+        if (session == null || !session.isActiveAndEnabled || !scorer.isActiveAndEnabled) scorer.CancelZone(this);
+        else scorer.ExitZone(this);
     }
     private void OnDisable()
     {
-        if (contacts.Count > 0 && scorer != null) scorer.ExitZone(this);
+        if (scorer != null) scorer.CancelZone(this);
         contacts.Clear();
     }
     private void Reset() => GetComponent<BoxCollider>().isTrigger = true;

@@ -29,8 +29,15 @@ public class WheelSkid : MonoBehaviour
         lastFixedUpdateTime = Time.time;
     }
 
+    public void BindRoadSurface(Collider surface)
+    {
+        if (skidmarksController != null) skidmarksController.BindRoadSurface(surface);
+    }
+
     private void LateUpdate()
     {
+        if (Time.timeScale <= 0f || wheelCollider == null) return;
+        if (!wheelCollider.enabled || rb == null || rb.isKinematic) { EndSkid(); return; }
         if (!wheelCollider.GetGroundHit(out WheelHit hit))
         {
             EndSkid();
@@ -68,6 +75,12 @@ public class WheelSkid : MonoBehaviour
     private void EndSkid()
     {
         lastSkid = -1;
-        if (SkidSound != null) SkidSound.volume = 0f;
+        if (SkidSound != null)
+        {
+            SkidSound.volume = 0f;
+            if (SkidSound.isPlaying) SkidSound.Stop();
+        }
     }
+
+    private void OnDisable() => EndSkid();
 }

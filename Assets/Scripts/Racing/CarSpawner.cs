@@ -5,6 +5,7 @@ public class CarSpawner : MonoBehaviour
 {
     [SerializeField] private Transform startSpawn;
     [SerializeField] private Rigidbody fallbackCar;
+    [SerializeField] private Collider roadSurface;
     [SerializeField] private GameObject[] sceneVehicleObjects;
     [SerializeField] private RaceSessionManager session;
     private Rigidbody spawnedBody;
@@ -41,6 +42,11 @@ public class CarSpawner : MonoBehaviour
         }
         if (!spawnedBody.isKinematic) { spawnedBody.linearVelocity = Vector3.zero; spawnedBody.angularVelocity = Vector3.zero; }
         session.BindCar(spawnedBody);
+        foreach (WheelSkid wheelSkid in spawnedBody.GetComponentsInChildren<WheelSkid>(true))
+            wheelSkid.BindRoadSurface(roadSurface);
+        var collisionRelay = spawnedBody.GetComponent<RaceCarCollisionRelay>();
+        if (collisionRelay == null) collisionRelay = spawnedBody.gameObject.AddComponent<RaceCarCollisionRelay>();
+        collisionRelay.Bind(session, session.GetComponent<DriftScorer>());
         // RuntimeInitializeOnLoadMethod runs only for the first scene. A car
         // created after leaving Garage needs its presentation installed here.
         if (spawnedBody.GetComponent<WheelController>() != null)

@@ -48,7 +48,7 @@ public static class RaceSceneBuilder
         Set(scorer,"session",session,"driftState",state);
         Set(finishTrigger,"session",session);
         var fallback = roots.SelectMany(r => r.GetComponentsInChildren<Rigidbody>(true)).First(b => b.GetComponent<WheelController>() != null);
-        Set(spawner,"startSpawn",start,"fallbackCar",fallback,"session",session);
+        Set(spawner,"startSpawn",start,"fallbackCar",fallback,"roadSurface",road.GetComponent<Collider>(),"session",session);
         var existingVehicles = new HashSet<GameObject> { fallback.transform.root.gameObject };
         foreach(var camera in roots.SelectMany(r => r.GetComponentsInChildren<Camera>(true))) existingVehicles.Add(camera.gameObject);
         var serializedSpawner = new SerializedObject(spawner);

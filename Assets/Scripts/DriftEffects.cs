@@ -21,16 +21,25 @@ public class DriftEffects : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         if (controller == null) controller = GetComponent<WheelController>();
+        PrepareSmoke(smokeRL);
+        PrepareSmoke(smokeRR);
     }
 
     private void Start()
     {
-        StopSmoke(smokeRL);
-        StopSmoke(smokeRR);
+        ClearSmoke(smokeRL);
+        ClearSmoke(smokeRR);
     }
 
     private void Update()
     {
+        if (Time.timeScale <= 0f) return;
+        if (rb == null || rb.isKinematic)
+        {
+            StopSmoke(smokeRL);
+            StopSmoke(smokeRR);
+            return;
+        }
         float speedKph = rb == null ? 0f : rb.linearVelocity.magnitude * 3.6f;
         bool handbrake = controller != null ? controller.IsHandbraking : Input.GetKey(KeyCode.Space);
 
@@ -40,7 +49,7 @@ public class DriftEffects : MonoBehaviour
 
     private void UpdateSmoke(WheelCollider wheel, ParticleSystem smoke, float speedKph, bool handbrake)
     {
-        if (smoke == null || wheel == null || !wheel.GetGroundHit(out WheelHit hit))
+        if (smoke == null || wheel == null || !wheel.enabled || !wheel.GetGroundHit(out WheelHit hit))
         {
             StopSmoke(smoke);
             return;
@@ -65,5 +74,24 @@ public class DriftEffects : MonoBehaviour
     {
         if (smoke != null && smoke.isPlaying)
             smoke.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+    }
+
+    private static void PrepareSmoke(ParticleSystem smoke)
+    {
+        if (smoke == null) return;
+        ParticleSystem.MainModule main = smoke.main;
+        main.playOnAwake = false;
+        ClearSmoke(smoke);
+    }
+
+    private static void ClearSmoke(ParticleSystem smoke)
+    {
+        if (smoke != null) smoke.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    private void OnDisable()
+    {
+        ClearSmoke(smokeRL);
+        ClearSmoke(smokeRR);
     }
 }

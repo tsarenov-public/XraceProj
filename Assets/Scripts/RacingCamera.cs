@@ -85,7 +85,10 @@ public class RacingCamera : MonoBehaviour
         // A chase camera must live in world space. Otherwise the car movement is
         // applied once by the hierarchy and a second time by this script.
         if (target != null && transform.IsChildOf(target))
+        {
+            VehicleRuntimeObjects.Register(targetRb != null ? targetRb.gameObject : target.gameObject, gameObject);
             transform.SetParent(null, true);
+        }
     }
 
     private void Start()

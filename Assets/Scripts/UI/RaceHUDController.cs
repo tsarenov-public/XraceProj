@@ -69,6 +69,8 @@ public class RaceHUDController : MonoBehaviour
 
     private void DisplayTime(float seconds)
     {
+        // Scene objects can be destroyed in a different order than their publishers.
+        if (timeText == null) return;
         long milliseconds = (long)Math.Floor(Math.Max(0, seconds) * 1000.0);
         if (milliseconds == displayedMilliseconds) return;
         displayedMilliseconds = milliseconds;
@@ -82,19 +84,23 @@ public class RaceHUDController : MonoBehaviour
 
     private void DisplayScore(int score)
     {
+        if (scoreText == null || scoreBuffer == null) return;
         int length = AppendNumber(scoreBuffer, prefixLength, Math.Max(0, score), 1);
         scoreText.SetCharArray(scoreBuffer, 0, length);
     }
 
     private void DisplayMultiplier(int multiplier)
     {
+        if (multiplierText == null) return;
         multiplierBuffer[0] = 'x';
         int length = AppendNumber(multiplierBuffer, 1, Math.Max(1, multiplier), 1);
         multiplierText.SetCharArray(multiplierBuffer, 0, length);
     }
 
-    private void DisplayState(RaceSessionManager.RaceState state) =>
-        hudPanel.SetActive(state != RaceSessionManager.RaceState.Finished);
+    private void DisplayState(RaceSessionManager.RaceState state)
+    {
+        if (hudPanel != null) hudPanel.SetActive(state != RaceSessionManager.RaceState.Finished);
+    }
 
     private static int AppendNumber(char[] buffer, int offset, long value, int minimumDigits)
     {

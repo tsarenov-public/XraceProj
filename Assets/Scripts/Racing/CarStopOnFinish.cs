@@ -12,8 +12,8 @@ public class CarStopOnFinish : MonoBehaviour
     public void Bind(Rigidbody target)
     {
         body = target;
-        controller = body.GetComponent<WheelController>();
-        wheels = body.GetComponentsInChildren<WheelCollider>(true);
+        controller = body != null ? body.GetComponent<WheelController>() : null;
+        wheels = body != null ? body.GetComponentsInChildren<WheelCollider>(true) : System.Array.Empty<WheelCollider>();
     }
     public void StopCar()
     {
@@ -21,7 +21,12 @@ public class CarStopOnFinish : MonoBehaviour
         // WheelController exposes read-only brake input, so use its existing wheel brakes
         // and the permitted velocity fallback; do not modify suspension/friction settings.
         if (controller != null) controller.enabled = false;
-        foreach (var wheel in wheels) { wheel.motorTorque = 0; wheel.brakeTorque = controller != null ? controller.handbrakeTorque : 4200; }
+        foreach (var wheel in wheels)
+        {
+            if (wheel == null) continue;
+            wheel.motorTorque = 0;
+            wheel.brakeTorque = controller != null ? controller.handbrakeTorque : 4200;
+        }
         initialVelocity = body.linearVelocity;
         initialAngularVelocity = body.angularVelocity;
         stopping = true;
@@ -30,9 +35,16 @@ public class CarStopOnFinish : MonoBehaviour
     {
         if (!stopping || body == null || body.isKinematic) return;
         elapsed += Time.fixedDeltaTime;
-        float remaining = Mathf.Clamp01(1 - elapsed / stopDuration);
+        float remaining = Mathf.Clamp01(1 - elapsed / Mathf.Max(0.01f, stopDuration));
         body.linearVelocity = initialVelocity * remaining;
         body.angularVelocity = initialAngularVelocity * remaining;
-        if (remaining <= 0) { body.isKinematic = true; stopping = false; }
+        if (remaining <= 0)
+        {
+            // Wheel physics must stop before the body becomes kinematic. Keep the
+            // wheel objects and suspension settings intact for the next fresh car.
+            foreach (var wheel in wheels) if (wheel != null) wheel.enabled = false;
+            body.isKinematic = true;
+            stopping = false;
+        }
     }
 }
