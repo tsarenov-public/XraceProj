@@ -36,9 +36,8 @@ public class DriftScorer : MonoBehaviour
         nextExpectedZoneId = zone.ZoneId;
         activeZone = zone;
         driftTime = 0;
-        // Entering a corner is not a drift. Show/apply the chain multiplier
-        // only while the vehicle actually satisfies the drift conditions.
-        SetMultiplier(1);
+        // Keep the multiplier last earned by real drift across straights.
+        // Entering the next corner does not increase it by itself.
     }
     private void FixedUpdate()
     {
@@ -46,18 +45,11 @@ public class DriftScorer : MonoBehaviour
         float speed = vehicleState.SpeedKmh;
         CheckStopped(speed);
         if (activeZone == null) return;
-        if (vehicleState == null || !vehicleState.IsGrounded || !vehicleState.IsDrifting)
-        {
-            SetMultiplier(1);
-            return;
-        }
+        if (!vehicleState.IsGrounded || !vehicleState.IsDrifting) return;
         float slip = vehicleState.SlipAngle;
         if (float.IsNaN(speed) || float.IsInfinity(speed) || float.IsNaN(slip) || float.IsInfinity(slip)
             || speed < activeZone.MinSpeedKmh || slip <= 0)
-        {
-            SetMultiplier(1);
             return;
-        }
         SetMultiplier(successfulChain + 1);
         float dt = Time.fixedDeltaTime;
         driftTime += dt;
@@ -133,7 +125,6 @@ public class DriftScorer : MonoBehaviour
         int id = activeZone.ZoneId;
         bool success = driftTime >= activeZone.MinDriftTime && driftTime > 0;
         activeZone = null;
-        SetMultiplier(1);
         nextExpectedZoneId = id + 1;
         if (success) { successfulChain++; OnZoneSuccess?.Invoke(id); }
         else ResetChain();

@@ -111,9 +111,14 @@ public static class RaceCoreSmokeCheck
                 var controller=hudPanel.GetComponentInParent<RaceHUDController>();controller.enabled=false;controller.enabled=true;
                 Require(hudMultiplier.text=="x2" && hudScore.text=="Дрифт: "+scorer.Score,"HUD resubscription did not restore current values.");
                 scorer.ExitZone(zones[1]);Require(scorer.successfulChain==2,"Zone 2 chain.");
-                Require(scorer.currentMultiplier==1,"Leaving a drift zone kept an active multiplier.");
+                Require(scorer.currentMultiplier==2 && hudMultiplier.text=="x2","Leaving a successful corner reset the earned multiplier.");
                 savedScore=scorer.Score;fake.IsDrifting=false;scorer.EnterZone(zones[2]);
-                Require(scorer.currentMultiplier==1,"Entering zone 3 without drift raised the multiplier.");
+                Require(scorer.currentMultiplier==2,"Entering zone 3 changed the earned multiplier before any drift.");
+                CheckHeldMultiplier();
+                fake.IsDrifting=true;scorer.SendMessage("FixedUpdate");
+                Require(scorer.currentMultiplier==3 && hudMultiplier.text=="x3","A real third drift did not advance to x3.");
+                fake.IsDrifting=false;savedScore=scorer.Score;scorer.SendMessage("FixedUpdate");
+                Require(scorer.currentMultiplier==3 && scorer.Score==savedScore && hudMultiplier.text=="x3","A brief grip interval reset x3 or awarded points.");
                 nextTime=Time.time+0.4f;
             }
             else if(step==6)
@@ -150,12 +155,23 @@ public static class RaceCoreSmokeCheck
             else
             {
                 Require(session.CarBody.isKinematic && timer.TimeSeconds==savedTime,"Finish did not freeze car/timer.");
-                Debug.Log("XRACE_RACE_SMOKE_OK: fallback/no duplicate, timer on move, x1/x2 only during drift, no drift/no ground/low speed/invalid state cannot advance chain, short drift preserves points without success, cancelled zone never awards success, grip turns/reverse/airborne excluded, stop and physical wall impact reset chain and pre-impact drift time without losing points, road/light impacts/pause do not reset, one finish, stopped car; HUD ready/time/score/multiplier/resubscribe/hide verified.");
+                Debug.Log("XRACE_RACE_SMOKE_OK: fallback/no duplicate, timer on move, x1/x2/x3 advance only during real drift; earned multiplier survives successful exits and brief grip/air/low-speed intervals without awarding points; failed corner resets; short drift/cancel/stop and physical wall collision preserve points; road/light contacts/pause do not reset; one finish and stopped car; HUD verified.");
                 SessionState.SetInt(Key,0);EditorApplication.Exit(0);return;
             }
             SessionState.SetInt(Key,step+1);
         }
         catch(Exception e){CleanupWallCollision();Debug.LogException(e);SessionState.SetInt(Key,0);EditorApplication.Exit(1);}
+    }
+    private static void CheckHeldMultiplier()
+    {
+        int before=scorer.Score;
+        fake.IsDrifting=false;scorer.SendMessage("FixedUpdate");
+        fake.IsDrifting=true;fake.IsGrounded=false;scorer.SendMessage("FixedUpdate");
+        fake.IsGrounded=true;fake.SpeedKmh=10;scorer.SendMessage("FixedUpdate");
+        fake.SpeedKmh=80;fake.SlipAngle=0;scorer.SendMessage("FixedUpdate");
+        fake.SlipAngle=45;fake.IsDrifting=false;
+        Require(scorer.currentMultiplier==2 && scorer.successfulChain==2 && scorer.Score==before && hudMultiplier.text=="x2",
+            "A brief invalid drift sample flickered the earned multiplier or added points.");
     }
     private static void CheckAdapterMotion()
     {

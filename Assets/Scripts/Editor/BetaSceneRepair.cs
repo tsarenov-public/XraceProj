@@ -6,6 +6,19 @@ using UnityEngine;
 
 public static class BetaSceneRepair
 {
+    public static void ApplyRaceUiFollowupAndValidate()
+    {
+        PauseMenuEditorSetup.RepairVolumeSlider();
+        ResultsPanelEditorSetup.Apply();
+        BetaValidationCheck.Run();
+    }
+
+    public static void ValidateAndRenderResultsPreview()
+    {
+        BetaValidationCheck.Run();
+        ResultsPanelEditorSetup.RenderPreview();
+    }
+
     public static void ApplyAndValidate()
     {
         Apply();

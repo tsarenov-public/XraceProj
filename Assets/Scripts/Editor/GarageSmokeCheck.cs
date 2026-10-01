@@ -131,7 +131,8 @@ public static class GarageSmokeCheck
         Quaternion spotRotation = preview.transform.parent.localRotation;
         MethodInfo rotate = typeof(GarageManager).GetMethod("ApplyPreviewRotation", BindingFlags.Instance | BindingFlags.NonPublic);
         rotate.Invoke(manager, new object[] { 90f / sensitivity });
-        Require(Quaternion.Angle(preview.transform.localRotation, Quaternion.AngleAxis(90f, Vector3.right)) < 0.01f, "Preview rotates on an axis other than local X.");
+        Require(Quaternion.Angle(preview.transform.localRotation, Quaternion.AngleAxis(90f, Vector3.up)) < 0.01f, "Preview rotates on an axis other than local Y.");
+        Require(Vector3.Dot(preview.transform.localRotation * Vector3.up, Vector3.up) > 0.999f, "Side rotation tipped the car forward.");
         Require(preview.transform.localPosition == position && preview.transform.parent.localRotation == spotRotation, "Preview rotation moved CarSpot or the car position.");
         rotate.Invoke(manager, new object[] { 270f / sensitivity });
         Require(Quaternion.Angle(preview.transform.localRotation, Quaternion.identity) < 0.01f, "Preview cannot complete a full 360 degree turn.");

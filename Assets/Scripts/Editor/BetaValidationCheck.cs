@@ -93,8 +93,13 @@ public static class BetaValidationCheck
         References(Single<DriftScorer>(roots), "session", "driftState");
         References(Single<RaceHUDController>(roots), "session", "timer", "scorer", "hudPanel", "timeText", "scoreText", "multiplierText");
         var finish = Single<FinishPanelController>(roots);
-        References(finish, "session", "timer", "scorer", "fallbackCar", "finishPanel", "finishTimeText", "finishScoreText", "recordText", "garageButton", "retryButton");
+        References(finish, "session", "timer", "scorer", "fallbackCar", "finishPanel", "finishTimeText", "finishScoreText", "recordText", "garageButton", "retryButton", "resultsButton", "resultsController");
         Require(finish.enabled, "Finish controller is disabled.");
+        var results = Single<ResultsPanelController>(roots);
+        References(results, "finishController", "finishPanel", "resultsPanel", "currentResultPanel", "currentResultText", "currentRecordText", "statusText", "historyScroll", "historyContent", "rowTemplate");
+        Require(results.enabled, "Results controller is disabled.");
+        Require(!Named(roots, "Results_Panel").activeSelf && !Named(roots, "CurrentRecord_Text").activeSelf && !Named(roots, "ResultRow_Template").activeSelf,
+            "Results panel, record label and row template must initially be hidden.");
         var pause = Single<PauseMenuController>(roots);
         References(pause, "session", "pausePanel", "settingsPanel", "musicVolumeSlider", "musicManagerPrefab");
         Require(pause.enabled, "Pause controller is disabled.");
@@ -104,9 +109,14 @@ public static class BetaValidationCheck
         var slider = Named(roots, "MusicVolume_Slider").GetComponent<Slider>();
         Require(slider != null && slider.minValue == 0 && slider.maxValue == 1 && !slider.wholeNumbers, "Volume slider must span 0..1.");
         Require(slider.navigation.mode == Navigation.Mode.None, "Volume slider must not consume track-selection arrows.");
+        Require(slider.GetComponent<MusicVolumeSliderCommitter>() != null, "Volume slider must save on pointer release/menu close.");
+        Require(slider.fillRect != null && slider.handleRect != null && slider.fillRect.sizeDelta == Vector2.zero && Mathf.Abs(slider.handleRect.sizeDelta.y) < 0.01f,
+            "Volume fill/handle stretched geometry is invalid.");
         EventBinding(slider.onValueChanged, pause, "SetMusicVolume", "MusicVolume_Slider");
         ButtonBinding(roots, "Btn_Garage", finish, "GoGarage");
         ButtonBinding(roots, "Btn_Retry", finish, "Retry");
+        ButtonBinding(roots, "Btn_Results", finish, "OpenResults");
+        ButtonBinding(roots, "Btn_ResultsBack", results, "Back");
         ButtonBinding(roots, "Btn_Continue", pause, "Continue");
         ButtonBinding(roots, "Btn_Settings", pause, "OpenSettings");
         ButtonBinding(roots, "Btn_ExitGarage", pause, "ExitGarage");

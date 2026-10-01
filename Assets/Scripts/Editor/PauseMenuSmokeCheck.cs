@@ -4,7 +4,10 @@ using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -64,6 +67,104 @@ public static class PauseMenuSmokeCheck
 #endif
     private static T Field<T>(object target, string name) => (T)target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance).GetValue(target);
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
+
+    private static void CheckPointerSlider(Slider slider)
+    {
+        Canvas.ForceUpdateCanvases();
+        var eventSystem = EventSystem.current;
+        Require(eventSystem != null, "No EventSystem for pointer volume check.");
+        var handleArea = slider.handleRect.parent as RectTransform;
+        Require(handleArea != null, "Missing handle slide area.");
+        var pointer = new PointerEventData(eventSystem) { button = PointerEventData.InputButton.Left, pointerId = -1 };
+        var results = new System.Collections.Generic.List<RaycastResult>();
+        float savedBeforeDrag = PlayerPrefs.GetFloat("MusicVolume", 0.8f);
+        // Click above the narrow painted track: the full slider rectangle must accept it.
+        pointer.position = SliderPoint(handleArea, 0, 0.3f);
+        pointer.pressPosition = pointer.position;
+        eventSystem.RaycastAll(pointer, results);
+        var rootImage = slider.GetComponent<Image>();
+        Debug.Log("XRACE_VOLUME_RAYCAST: screen=" + Screen.width + "x" + Screen.height + " position=" + pointer.position +
+            " rootRect=" + ((RectTransform)slider.transform).rect + " handleArea=" + handleArea.rect +
+            " handleRect=" + slider.handleRect.rect + " rootRaycast=" + (rootImage != null && rootImage.raycastTarget) +
+            " rootCull=" + (rootImage != null && rootImage.canvasRenderer.cull) + " rootDepth=" + (rootImage != null ? rootImage.depth : -2) +
+            " hits=" + string.Join(",", results.Select(hit => hit.gameObject.name)));
+        Require(Mathf.Abs(slider.handleRect.rect.height - handleArea.rect.height) < 0.05f && Mathf.Abs(slider.handleRect.sizeDelta.y) < 0.05f,
+            "Handle height contains a second size offset.");
+        Require(results.Count != 0 && results[0].gameObject.transform.IsChildOf(slider.transform), "Full-height slider hit area is blocked.");
+        pointer.pointerPressRaycast = pointer.pointerCurrentRaycast = results[0];
+        pointer.pointerPress = pointer.pointerDrag = slider.gameObject;
+        ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.pointerDownHandler);
+        ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.initializePotentialDrag);
+        pointer.dragging = true;
+        ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.beginDragHandler);
+        Require(eventSystem.currentSelectedGameObject != slider.gameObject, "Volume slider would consume music arrow keys.");
+        Require(Mathf.Abs(slider.value) < 0.005f, "Click on slider start did not select zero volume.");
+        float previous = slider.value;
+        foreach (float value in new[] { 0.25f, 0.5f, 0.75f, 1f })
+        {
+            pointer.position = SliderPoint(handleArea, value, 0.3f);
+            ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.dragHandler);
+            Require(slider.value > previous && Mathf.Abs(slider.value - value) < 0.005f, "Volume drag is non-monotonic or offset.");
+            Require(Mathf.Abs(slider.fillRect.rect.width - ((RectTransform)slider.fillRect.parent).rect.width * slider.value) < 0.05f, "Volume fill extends beyond its normalized track.");
+            Require(Mathf.Approximately(music.GetComponent<AudioSource>().volume, slider.value), "Dragging did not immediately apply audio volume.");
+            Require(Time.timeScale == 0 && !music.GetComponent<AudioSource>().isPlaying, "Volume dragging resumed the paused race or music.");
+            previous = slider.value;
+        }
+        pointer.position = SliderPoint(handleArea, 0, 0.3f);
+        ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.dragHandler);
+        Require(Mathf.Abs(slider.value) < 0.005f && music.GetComponent<AudioSource>().volume < 0.005f, "Volume slider cannot mute at zero.");
+        pointer.position = SliderPoint(handleArea, 0.37f, 0.3f);
+        ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.dragHandler);
+        Require(PlayerPrefs.GetFloat("MusicVolume", 0.8f) == savedBeforeDrag, "Pointer drag writes PlayerPrefs before release.");
+        ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.pointerUpHandler);
+        ExecuteEvents.Execute(slider.gameObject, pointer, ExecuteEvents.endDragHandler);
+        Require(Mathf.Approximately(PlayerPrefs.GetFloat("MusicVolume"), 0.37f), "Pointer release did not save volume.");
+        Debug.Log("XRACE_VOLUME_POINTER_OK: full-height click, real pointer drag 0/25/50/75/100%, correct fill, immediate paused audio, release persistence.");
+    }
+
+    private static Vector2 SliderPoint(RectTransform area, float value, float verticalOffset)
+    {
+        var canvas = area.GetComponentInParent<Canvas>();
+        var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+        return RectTransformUtility.WorldToScreenPoint(camera, area.TransformPoint(new Vector3(Mathf.Lerp(area.rect.xMin, area.rect.xMax, value), area.rect.height * verticalOffset, 0)));
+    }
+
+    private static void CaptureSettings()
+    {
+        var canvas = Field<Slider>(menu, "musicVolumeSlider").GetComponentInParent<Canvas>();
+        var camera = Camera.allCameras.First(value => value.isActiveAndEnabled);
+        var renderTexture = new RenderTexture(1280, 720, 24);
+        var texture = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+        var previousActive = RenderTexture.active;
+        var previousTarget = camera.targetTexture;
+        var previousMode = canvas.renderMode;
+        var previousCamera = canvas.worldCamera;
+        float previousDistance = canvas.planeDistance;
+        try
+        {
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = Mathf.Max(camera.nearClipPlane + 0.1f, 1f);
+            camera.targetTexture = renderTexture;
+            Canvas.ForceUpdateCanvases();
+            RenderPipeline.SubmitRenderRequest(camera, new UniversalRenderPipeline.SingleCameraRequest { destination = renderTexture });
+            RenderTexture.active = renderTexture;
+            texture.ReadPixels(new Rect(0, 0, 1280, 720), 0, 0);
+            texture.Apply();
+            System.IO.File.WriteAllBytes("Logs/SettingsPreview.png", texture.EncodeToPNG());
+        }
+        finally
+        {
+            camera.targetTexture = previousTarget;
+            canvas.renderMode = previousMode;
+            canvas.worldCamera = previousCamera;
+            canvas.planeDistance = previousDistance;
+            RenderTexture.active = previousActive;
+            UnityEngine.Object.DestroyImmediate(texture);
+            UnityEngine.Object.DestroyImmediate(renderTexture);
+            Canvas.ForceUpdateCanvases();
+        }
+    }
     private static void Tick()
     {
         int step = SessionState.GetInt(Key, 0); if (step == 0) return;
@@ -125,7 +226,11 @@ public static class PauseMenuSmokeCheck
                 Require(music.GetComponent<AudioSource>().timeSamples == SessionState.GetInt(Key + "Sample", 0), "Continue restarted the track.");
                 menu.TogglePause();
                 menu.OpenSettings(); Require(Time.timeScale == 0 && Field<GameObject>(menu, "settingsPanel").activeSelf, "Settings unpaused race.");
-                Field<Slider>(menu, "musicVolumeSlider").value = 0.37f;
+            }
+            else if (step == 5)
+            {
+                // Let the newly activated panel render before sending real pointer events.
+                CheckPointerSlider(Field<Slider>(menu, "musicVolumeSlider"));
                 Require(Mathf.Approximately(music.GetComponent<AudioSource>().volume, 0.37f), "Music volume not applied.");
                 Require(Mathf.Approximately(PlayerPrefs.GetFloat("MusicVolume"), 0.37f), "Volume not saved.");
                 SettingsService.Set(0.12f); SettingsService.Load(); Require(Mathf.Approximately(SettingsService.Get(), 0.37f), "Volume reload failed.");
@@ -136,15 +241,13 @@ public static class PauseMenuSmokeCheck
 #else
                 menu.PrevTrack();
 #endif
-            }
-            else if (step == 5)
-            {
 #if ENABLE_INPUT_SYSTEM
                 InputSystem.QueueStateEvent(Keyboard.current, new KeyboardState());
 #endif
                 Require(music.CurrentTrack == second, "Left arrow did not change track.");
                 Require(!music.GetComponent<AudioSource>().isPlaying, "Track switching played music in pause.");
                 Require(Mathf.Approximately(Field<Slider>(menu, "musicVolumeSlider").value, 0.37f), "Arrow also changed volume slider.");
+                if (Environment.GetCommandLineArgs().Contains("-xrace-capture-settings")) CaptureSettings();
                 menu.SettingsBack(); Require(Field<GameObject>(menu, "pausePanel").activeSelf, "Back failed.");
                 menu.Continue(); Require(Time.timeScale == 1 && !session.IsPaused && !AudioListener.pause, "Continue failed.");
             }
@@ -183,7 +286,7 @@ public static class PauseMenuSmokeCheck
             else
             {
                 Require(SceneManager.GetActiveScene().name == "Garage" && Time.timeScale == 1, "ESC affected garage.");
-                Cleanup(); Debug.Log("XRACE_PAUSE_SMOKE_OK: ESC, timer freeze/resume, settings, volume save/reload, tracks/wrap/arrows, active driving, garage silence."); EditorApplication.Exit(0); return;
+                Cleanup(); Debug.Log("XRACE_PAUSE_SMOKE_OK: ESC, timer freeze/resume, pointer volume/fill/save/reload, tracks/wrap/arrows, active driving, garage silence."); EditorApplication.Exit(0); return;
             }
             SessionState.SetInt(Key, step + 1);
         }

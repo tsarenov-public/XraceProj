@@ -15,7 +15,7 @@ public class GarageManager : MonoBehaviour
     [SerializeField] private TMP_Text carNameText;
     [SerializeField] private Button raceButton;
     [SerializeField] private MusicManager musicManagerPrefab;
-    [Header("Preview rotation (local X axis only)")]
+    [Header("Preview rotation (local Y axis)")]
     [SerializeField] private bool allowPreviewRotation = true;
     [SerializeField, Min(0.01f)] private float previewRotationDegreesPerPixel = 0.35f;
     private GameObject preview;
@@ -117,7 +117,7 @@ public class GarageManager : MonoBehaviour
         if (!allowPreviewRotation || loading || !HasReadyPreview()) return;
         previewAngleDegrees = Mathf.Repeat(previewAngleDegrees + horizontalPixels * previewRotationDegreesPerPixel, 360f);
         // Rotate the preview pivot only: CarSpot, position, scale and the source prefab stay unchanged.
-        preview.transform.localRotation = Quaternion.AngleAxis(previewAngleDegrees, Vector3.right);
+        preview.transform.localRotation = Quaternion.AngleAxis(previewAngleDegrees, Vector3.up);
     }
 
     private void OnDisable() => draggingPreview = false;

@@ -36,6 +36,8 @@ public class PauseMenuController : MonoBehaviour
             Debug.LogError("PauseMenuController must be on the active Canvas, outside its panels.", this);
             enabled = false;
         }
+        if (musicVolumeSlider.GetComponent<MusicVolumeSliderCommitter>() == null)
+            musicVolumeSlider.gameObject.AddComponent<MusicVolumeSliderCommitter>();
     }
     private void Start()
     {
@@ -92,6 +94,7 @@ public class PauseMenuController : MonoBehaviour
     public void Continue()
     {
         if (!initialized) return;
+        SettingsService.Save();
         bool wasPaused = paused;
         paused = false;
         if (pausePanel != null) pausePanel.SetActive(false);
@@ -117,6 +120,7 @@ public class PauseMenuController : MonoBehaviour
     public void SettingsBack()
     {
         if (!paused || leaving) return;
+        SettingsService.Save();
         settingsPanel.SetActive(false);
         pausePanel.SetActive(true);
     }
@@ -124,7 +128,7 @@ public class PauseMenuController : MonoBehaviour
     {
         if (!initialized || leaving) return;
         if (music != null) music.SetVolume(volume);
-        else { SettingsService.Set(volume); SettingsService.Save(); }
+        else SettingsService.Set(volume);
     }
     public void NextTrack() { if (paused && !leaving && music != null) music.NextTrack(); }
     public void PrevTrack() { if (paused && !leaving && music != null) music.PrevTrack(); }
@@ -150,6 +154,7 @@ public class PauseMenuController : MonoBehaviour
     private void OnDisable()
     {
         if (!initialized) return;
+        SettingsService.Save();
         if (session != null) session.OnStateChanged -= OnRaceStateChanged;
         if (music != null) music.OnTrackChanged -= RefreshTrack;
         subscribed = false;

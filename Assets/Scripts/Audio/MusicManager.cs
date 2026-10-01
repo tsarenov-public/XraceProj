@@ -108,8 +108,10 @@ public class MusicManager : MonoBehaviour
     public void SetVolume(float volume)
     {
         SettingsService.Set(volume);
-        SettingsService.Save();
     }
+
+    private void OnApplicationPause(bool paused) { if (paused && Instance == this) SettingsService.Save(); }
+    private void OnApplicationQuit() { if (Instance == this) SettingsService.Save(); }
 
     private void ApplyVolume(float volume) => audioSource.volume = volume;
 

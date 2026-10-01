@@ -20,6 +20,8 @@ public class FinishPanelController : MonoBehaviour
     [SerializeField] private TMP_Text saveStatusText;
     [SerializeField] private Button garageButton;
     [SerializeField] private Button retryButton;
+    [SerializeField] private Button resultsButton;
+    [SerializeField] private ResultsPanelController resultsController;
     private bool finishHandled;
     private bool loading;
     public RaceResultEntry LastResult { get; private set; }
@@ -84,6 +86,11 @@ public class FinishPanelController : MonoBehaviour
     }
     public void GoGarage() => LoadScene("Garage");
     public void Retry() => LoadScene("Touge01");
+    public void OpenResults()
+    {
+        if (!finishHandled || loading || resultsController == null) return;
+        resultsController.OpenResults();
+    }
     private void LoadScene(string sceneName)
     {
         if (loading) return;
@@ -91,6 +98,7 @@ public class FinishPanelController : MonoBehaviour
         { if (saveStatusText != null) saveStatusText.text = "Сцена не добавлена в сборку: " + sceneName; return; }
         loading = true;
         garageButton.interactable = retryButton.interactable = false;
+        if (resultsButton != null) resultsButton.interactable = false;
         Time.timeScale = 1;
         AudioListener.pause = false;
         session.SetPaused(false);
