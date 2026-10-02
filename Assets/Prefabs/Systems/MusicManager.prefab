@@ -142,5 +142,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02c506e881b34f0b86a5e24c98a778c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MusicManager
-  tracks: []
+  tracks:
+  - {fileID: 8300000, guid: 2d78bd5100f184f77b0cf2228867a8e3, type: 3}
+  - {fileID: 8300000, guid: 2d78bd5100f184f77b0cf2228867a8e3, type: 3}
+  - {fileID: 8300000, guid: 624e7aa7a8c664c0d9628337ef92b5da, type: 3}
+  - {fileID: 8300000, guid: fc19b35fc197246d086328cdb068c57c, type: 3}
   audioSource: {fileID: 293937347172582795}
