@@ -41,7 +41,7 @@ public sealed class VehiclePresentation : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (steeringWheel == null || controller == null)
+        if (steeringWheel == null || controller == null || !controller.isActiveAndEnabled)
             return;
 
         float normalizedWheelAngle = controller.FrontWheelSteerAngle

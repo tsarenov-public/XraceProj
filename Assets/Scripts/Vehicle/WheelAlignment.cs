@@ -16,6 +16,9 @@ public class WheelAlignment : MonoBehaviour
 
     Quaternion rest; // родная поза меша 
     float spin;      // накопленный угол вращения, градусы
+    private Rigidbody vehicleBody;
+
+    private void Awake() => vehicleBody = GetComponentInParent<Rigidbody>();
 
     void Start()
     {
@@ -26,6 +29,7 @@ public class WheelAlignment : MonoBehaviour
     void LateUpdate()
     {
         if (wheelGraphic == null || wheelCol == null) return;
+        if (!wheelCol.enabled || vehicleBody != null && vehicleBody.isKinematic) return;
 
         if (steerable)
             wheelCol.steerAngle = steeringAngle;

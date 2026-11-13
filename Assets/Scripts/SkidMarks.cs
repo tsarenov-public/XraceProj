@@ -20,18 +20,20 @@ public class SkidMarks : MonoBehaviour
 
     void Start()
     {
-    rb = GetComponent<Rigidbody>();
-
-    trailRL.emitting = false;
-    trailRR.emitting = false;
-
-    // Удаляем точку спавна чтобы следы не висели в воздухе
-    trailRL.Clear();
-    trailRR.Clear();
+        rb = GetComponent<Rigidbody>();
+        ResetTrail(trailRL);
+        ResetTrail(trailRR);
     }
 
     void Update()
     {
+        if (rb == null || Time.timeScale <= 0f) return;
+        if (rb.isKinematic)
+        {
+            ResetTrail(trailRL);
+            ResetTrail(trailRR);
+            return;
+        }
         float speed = rb.linearVelocity.magnitude;
         UpdateTrail(rearLeft, trailRL, speed);
         UpdateTrail(rearRight, trailRR, speed);
@@ -40,6 +42,7 @@ public class SkidMarks : MonoBehaviour
     void UpdateTrail(WheelCollider wheel, TrailRenderer trail, float speed)
     {
         if (trail == null || wheel == null) return;
+        if (!wheel.enabled) { trail.emitting = false; return; }
 
         // Колесо в воздухе след не рисуется
         WheelHit hit;
@@ -59,5 +62,18 @@ public class SkidMarks : MonoBehaviour
         {
             trail.widthMultiplier = Mathf.Lerp(minWidth, maxWidth, Mathf.Clamp01(slip));
         }
+    }
+
+    private void OnDisable()
+    {
+        ResetTrail(trailRL);
+        ResetTrail(trailRR);
+    }
+
+    private static void ResetTrail(TrailRenderer trail)
+    {
+        if (trail == null) return;
+        trail.emitting = false;
+        trail.Clear();
     }
 }

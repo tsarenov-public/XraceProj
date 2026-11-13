@@ -9,6 +9,7 @@ public class CameraSwitcher : MonoBehaviour
 
     private void Update()
     {
+        if (Time.timeScale <= 0f || keys == null || cameras == null) return;
         for (int i = 0; i < keys.Length && i < cameras.Length; i++)
             if (Input.GetKeyDown(keys[i]))
                 Select(i);
@@ -16,7 +17,8 @@ public class CameraSwitcher : MonoBehaviour
 
     private void Select(int i)
     {
+        if (cameras == null) return;
         for (int j = 0; j < cameras.Length; j++)
-            cameras[j].SetActive(j == i);   // выключает и камеру, и её скрипт, и её Audio Listener
+            if (cameras[j] != null) cameras[j].SetActive(j == i);   // выключает и камеру, и её скрипт, и её Audio Listener
     }
 }

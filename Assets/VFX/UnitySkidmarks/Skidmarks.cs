@@ -14,8 +14,6 @@ public class Skidmarks : MonoBehaviour {
 	[Header("Road surface projection")]
 	[Tooltip("Collider of the road mesh used as the authoritative skidmark surface.")]
 	[SerializeField] Collider roadSurface;
-	[Tooltip("Fallback scene object name when the road collider is not assigned directly.")]
-	[SerializeField] string roadSurfaceName = "Touge_01";
 	[Tooltip("Small lift above the road mesh that prevents depth fighting.")]
 	[SerializeField, Min(0f)] float surfaceOffset = 0.018f;
 	[Tooltip("Height above the wheel contact point from which the road is sampled.")]
@@ -46,6 +44,7 @@ public class Skidmarks : MonoBehaviour {
 	int markIndex;
 	MarkSection[] skidmarks;
 	Mesh marksMesh;
+	Material runtimeMaterial;
 	MeshRenderer mr;
 	MeshFilter mf;
 
@@ -58,7 +57,6 @@ public class Skidmarks : MonoBehaviour {
 
 	bool meshUpdated;
 	bool haveSetBounds;
-	bool missingRoadWarningShown;
 
 	Color32 black = Color.black;
 
@@ -68,18 +66,17 @@ public class Skidmarks : MonoBehaviour {
 		// A car prefab may carry its own controller. Detach it so generated marks
 		// remain in world space instead of following the moving vehicle.
 		if (transform.parent != null) {
+			Rigidbody vehicleBody = GetComponentInParent<Rigidbody>();
+			if (vehicleBody != null) VehicleRuntimeObjects.Register(vehicleBody.gameObject, gameObject);
 			transform.SetParent(null, true);
 		}
-		if (transform.position != Vector3.zero) {
-			Debug.LogWarning("Skidmarks.cs transform must be at 0,0,0. Setting it to zero now.");
-			transform.position = Vector3.zero;
-			transform.rotation = Quaternion.identity;
-		}
+		transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+		transform.localScale = Vector3.one;
 
-		ResolveRoadSurface();
+		InitializeMesh();
 	}
 
-	protected void Start() {
+	void InitializeMesh() {
 		// Generate a fixed array of skidmarks
 		skidmarks = new MarkSection[MAX_MARKS];
 		for (int i = 0; i < MAX_MARKS; i++) {
@@ -92,7 +89,7 @@ public class Skidmarks : MonoBehaviour {
 			mr = gameObject.AddComponent<MeshRenderer>();
 		}
 
-		marksMesh = new Mesh();
+		marksMesh = new Mesh { name = "Runtime Skidmarks", hideFlags = HideFlags.DontSave };
 		marksMesh.MarkDynamic();
 		if (mf == null) {
 			mf = gameObject.AddComponent<MeshFilter>();
@@ -108,8 +105,14 @@ public class Skidmarks : MonoBehaviour {
 
 		mr.shadowCastingMode = ShadowCastingMode.Off;
 		mr.receiveShadows = false;
-		mr.material = skidmarksMaterial;
-		mr.material.renderQueue = SKIDMARK_RENDER_QUEUE;
+		if (skidmarksMaterial != null) {
+			runtimeMaterial = new Material(skidmarksMaterial) {
+				name = skidmarksMaterial.name + " (Runtime Skidmarks)",
+				hideFlags = HideFlags.DontSave,
+				renderQueue = SKIDMARK_RENDER_QUEUE
+			};
+			mr.sharedMaterial = runtimeMaterial;
+		}
 		mr.sortingOrder = 10;
 		mr.lightProbeUsage = LightProbeUsage.Off;
 	}
@@ -118,7 +121,7 @@ public class Skidmarks : MonoBehaviour {
 
 
 	protected void LateUpdate() {
-		if (!meshUpdated) return;
+		if (!meshUpdated || marksMesh == null || mf == null) return;
 		meshUpdated = false;
 
 		// Reassign the mesh if it's changed this frame
@@ -138,6 +141,17 @@ public class Skidmarks : MonoBehaviour {
 		}
 
 		mf.sharedMesh = marksMesh;
+	}
+
+	protected void OnDestroy() {
+		// Native Mesh and Material objects outlive their renderer unless explicitly released.
+		// Repeated Touge01 loads must not retain one allocation for every finished race.
+		if (mf != null && mf.sharedMesh == marksMesh) mf.sharedMesh = null;
+		if (mr != null && mr.sharedMaterial == runtimeMaterial) mr.sharedMaterial = null;
+		if (marksMesh != null) Destroy(marksMesh);
+		if (runtimeMaterial != null) Destroy(runtimeMaterial);
+		marksMesh = null;
+		runtimeMaterial = null;
 	}
 
 	// #### PUBLIC METHODS ####
@@ -163,7 +177,8 @@ public class Skidmarks : MonoBehaviour {
 
 	// Function called by the wheel that's skidding. Sets the colour and intensity of the skidmark section.
 	public int AddSkidMark(Vector3 pos, Vector3 normal, Color32 colour, int lastIndex) {
-		if (colour.a == 0) return -1; // No point in continuing if it's invisible
+		if (colour.a == 0 || skidmarks == null || marksMesh == null || !isActiveAndEnabled) return -1;
+		if (lastIndex < -1 || lastIndex >= MAX_MARKS) lastIndex = -1;
 
 		MarkSection lastSection = null;
 		Vector3 distAndDirection = Vector3.zero;
@@ -219,25 +234,12 @@ public class Skidmarks : MonoBehaviour {
 		return curIndex;
 	}
 
-	void ResolveRoadSurface() {
-		if (roadSurface != null || string.IsNullOrWhiteSpace(roadSurfaceName)) return;
-
-		GameObject roadObject = GameObject.Find(roadSurfaceName);
-		if (roadObject != null) {
-			roadSurface = roadObject.GetComponent<Collider>();
-		}
-
-		if (roadSurface == null && !missingRoadWarningShown) {
-			Debug.LogWarning(
-				$"Skidmarks could not find road collider '{roadSurfaceName}'. " +
-				"Marks will use WheelCollider contact points instead.",
-				this);
-			missingRoadWarningShown = true;
-		}
+	public void BindRoadSurface(Collider surface) {
+		roadSurface = surface;
 	}
 
 	void ProjectOntoRoad(ref Vector3 pos, ref Vector3 normal) {
-		if (roadSurface == null) ResolveRoadSurface();
+		// Without an assigned scene surface, keep the WheelCollider contact point.
 		if (roadSurface == null) return;
 
 		float startHeight = Mathf.Max(0.1f, projectionStartHeight);

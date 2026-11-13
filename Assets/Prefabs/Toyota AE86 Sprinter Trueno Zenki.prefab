@@ -556,8 +556,8 @@ MonoBehaviour:
   headlights: {fileID: 6788830039071438385}
   wheels: {fileID: 8543517112376264343}
   taillightLens: {fileID: 2100000, guid: 186234cda57584eed9da8eeca9a1a405, type: 2}
-  tailColor: {r: 0.65, g: 0.003, b: 0.001, a: 1}
-  brakeColor: {r: 4, g: 0.012, b: 0.003, a: 1}
+  tailColor: {r: 0.13397168, g: 0, b: 0, a: 1}
+  brakeColor: {r: 0.2871746, g: 0.000114073715, b: 0.000028518429, a: 1}
 --- !u!114 &8269103016747694274
 MonoBehaviour:
   m_ObjectHideFlags: 0
